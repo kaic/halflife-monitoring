@@ -3,6 +3,7 @@
 <p align="center">
   <img src="HalfLifeMonitoring.png" alt="HalfLife Monitoring" width="400">
 </p>
+Minimal Half-Life style overlay theme for [Rainmater](https://www.rainmeter.net/) to watch CPU, GPU, RAM, disk, and network usage right on the desktop.
 
 <p align="center">
   <strong>Sistema de monitoramento de hardware para Windows com overlay Rainmeter</strong>
@@ -83,6 +84,7 @@
 ### First Run
 
 After installation, you should see:
+
 - TempBridge running (console window or tray icon)
 - Rainmeter overlay in the top-right corner
 - All metrics updating in real-time
@@ -105,15 +107,18 @@ WindowY=40
 ### Troubleshooting
 
 **GPU shows 0%?**
+
 - Ensure TempBridge is running
 - Check that `@Resources/hwstats.txt` exists and is being updated
 - Try restarting TempBridge
 
 **Disk always 0 KB/s?**
+
 - Run `fix_disk_monitoring.bat` as Administrator
 - Restart your computer
 
 **Skin not loading?**
+
 - Refresh Rainmeter (right-click → Refresh All)
 - Check Rainmeter logs for errors
 
