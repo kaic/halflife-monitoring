@@ -21,6 +21,20 @@ echo.
 echo Removendo tarefa agendada...
 schtasks /Delete /TN "%TASK_NAME%" /F
 
+:: Limpeza de legado (versoes anteriores)
+set "OLD_SHORTCUT=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\TempBridge.lnk"
+set "SCRIPT_DIR=%~dp0"
+set "OLD_VBS=%SCRIPT_DIR%TempBridge_Hidden.vbs"
+
+if exist "%OLD_SHORTCUT%" (
+    echo [INFO] Removendo atalho antigo do Startup...
+    del "%OLD_SHORTCUT%"
+)
+if exist "%OLD_VBS%" (
+    echo [INFO] Removendo script VBS antigo...
+    del "%OLD_VBS%"
+)
+
 if %errorLevel% equ 0 (
     echo [OK] TempBridge removido da inicializacao.
 ) else (

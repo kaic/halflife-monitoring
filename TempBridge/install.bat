@@ -16,6 +16,18 @@ if %errorLevel% neq 0 (
 set "SCRIPT_DIR=%~dp0"
 set "EXE_PATH=%SCRIPT_DIR%TempBridge.exe"
 set "TASK_NAME=TempBridgeMonitoring"
+set "OLD_SHORTCUT=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\TempBridge.lnk"
+set "OLD_VBS=%SCRIPT_DIR%TempBridge_Hidden.vbs"
+
+echo Limpando instalacoes antigas...
+if exist "%OLD_SHORTCUT%" (
+    echo [INFO] Removendo atalho antigo do Startup...
+    del "%OLD_SHORTCUT%"
+)
+if exist "%OLD_VBS%" (
+    echo [INFO] Removendo script VBS antigo...
+    del "%OLD_VBS%"
+)
 
 echo Configurando tarefa agendada para iniciar com Windows (Admin)...
 echo.
