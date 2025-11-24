@@ -3,48 +3,47 @@
 <p align="center">
   <img src="HalfLifeMonitoring.png" alt="HalfLife Monitoring" width="400">
 </p>
-Minimal Half-Life style overlay theme for [Rainmater](https://www.rainmeter.net/) to watch CPU, GPU, RAM, disk, and network usage right on the desktop.
-
+Minimal Half-Life style overlay theme for [Rainmater](https://www.rainmeter.net/) to watch CPU, GPU,
 <p align="center">
-  <strong>Sistema de monitoramento de hardware para Windows com overlay Rainmeter</strong>
+  <strong>Hardware monitoring system for Windows with Rainmeter overlay</strong>
 </p>
 
 <p align="center">
-  <a href="README.pt-BR.md">🇧🇷 Português</a> •
-  <a href="#features">Features</a> •
-  <a href="#installation">Installation</a> •
+  <a href="README.pt-BR.md">Português</a>
+  <a href="#features">Features</a>
+  <a href="#installation">Installation</a>
   <a href="#usage">Usage</a>
 </p>
 
 ---
 
-## ✨ Features
+## Features
 
 - **CPU**: Usage % + Temperature °C
 - **GPU**: Usage % + Temperature °C *(NVIDIA/AMD/Intel)*
 - **RAM**: Usage in GB
 - **Disk**: Read/Write activity in MB/s
-- **Network**: Download/Upload in KB/s
+- **Network**: Download/Upload in MB/s
 
-### What makes it special?
+### Key Benefits
 
-- 🎯 **Real GPU monitoring** - Uses LibreHardwareMonitorLib for accurate readings
-- ⚡ **Lightweight** - Minimal resource usage (~10MB RAM)
-- 🎨 **Customizable** - Edit colors, position, and metrics easily
-- 🔄 **Auto-start** - Runs on Windows startup
-- 🆓 **Open Source** - MIT License
+- **Real GPU monitoring** - Uses LibreHardwareMonitorLib for accurate readings
+- **Lightweight** - Minimal resource usage (~10MB RAM)
+- **Customizable** - Edit colors, position, and metrics easily
+- **Auto-start** - Runs on Windows startup
+- **Open Source** - MIT License
 
 ---
 
-## 📋 Requirements
+## Requirements
 
 - **Windows 10/11** (x64)
-- **Rainmeter 4.5+** - [Download here](https://www.rainmeter.net/)
-- **.NET 8.0 Runtime** - [Download here](https://dotnet.microsoft.com/download/dotnet/8.0)
+- **Rainmeter 4.5+** - [Download](https://www.rainmeter.net/)
+- **.NET 8.0 Runtime** - [Download](https://dotnet.microsoft.com/download/dotnet/8.0)
 
 ---
 
-## 🚀 Installation
+## Installation
 
 ### Quick Install (Recommended)
 
@@ -79,7 +78,7 @@ Minimal Half-Life style overlay theme for [Rainmater](https://www.rainmeter.net/
 
 ---
 
-## 🎮 Usage
+## Usage
 
 ### First Run
 
@@ -112,7 +111,7 @@ WindowY=40
 - Check that `@Resources/hwstats.txt` exists and is being updated
 - Try restarting TempBridge
 
-**Disk always 0 KB/s?**
+**Disk always 0 MB/s?**
 
 - Run `fix_disk_monitoring.bat` as Administrator
 - Restart your computer
@@ -124,7 +123,7 @@ WindowY=40
 
 ---
 
-## 🛠 Building from Source
+## Building from Source
 
 ### Prerequisites
 
@@ -152,7 +151,7 @@ Output will be in `dist/` folder.
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 halflife-monitoring/
@@ -172,7 +171,7 @@ halflife-monitoring/
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please:
 
@@ -184,24 +183,24 @@ Contributions are welcome! Please:
 
 ---
 
-## 📜 License
+## License
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [LibreHardwareMonitorLib](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) - Hardware monitoring library
 - [Rainmeter](https://www.rainmeter.net/) - Desktop customization platform
 
 ---
 
-## 📧 Support
+## Support
 
 - **Issues**: [GitHub Issues](../../issues)
 - **Discussions**: [GitHub Discussions](../../discussions)
 
 ---
 
-<p align="center">Made with ❤️ by <a href="https://github.com/yourusername">Kaic</a></p>
+<p align="center">Made by <a href="https://github.com/yourusername">Kaic</a></p>

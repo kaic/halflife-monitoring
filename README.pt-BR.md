@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="README.md">🇺🇸 English</a> •
+  <a href="README.md">English</a> •
   <a href="#recursos">Recursos</a> •
   <a href="#instalação">Instalação</a> •
   <a href="#uso">Uso</a>
@@ -17,33 +17,33 @@
 
 ---
 
-## ✨ Recursos
+## Recursos
 
 - **CPU**: Uso % + Temperatura °C
 - **GPU**: Uso % + Temperatura °C *(NVIDIA/AMD/Intel)*
 - **RAM**: Uso em GB
 - **Disco**: Leitura/Escrita em MB/s
-- **Rede**: Download/Upload em KB/s
+- **Rede**: Download/Upload em MB/s
 
-### O que torna especial?
+### Principais Benefícios
 
-- 🎯 **Monitoramento real de GPU** - Usa LibreHardwareMonitorLib para leituras precisas
-- ⚡ **Leve** - Uso mínimo de recursos (~10MB RAM)
-- 🎨 **Personalizável** - Edite cores, posição e métricas facilmente
-- 🔄 **Início automático** - Executa na inicialização do Windows
-- 🆓 **Código Aberto** - Licença MIT
+- **Monitoramento real de GPU** - Usa LibreHardwareMonitorLib para leituras precisas
+- **Leve** - Uso mínimo de recursos (~10MB RAM)
+- **Personalizável** - Edite cores, posição e métricas facilmente
+- **Início automático** - Executa na inicialização do Windows
+- **Código Aberto** - Licença MIT
 
 ---
 
-## 📋 Requisitos
+## Requisitos
 
 - **Windows 10/11** (x64)
-- **Rainmeter 4.5+** - [Baixar aqui](https://www.rainmeter.net/)
-- **.NET 8.0 Runtime** - [Baixar aqui](https://dotnet.microsoft.com/download/dotnet/8.0)
+- **Rainmeter 4.5+** - [Baixar](https://www.rainmeter.net/)
+- **.NET 8.0 Runtime** - [Baixar](https://dotnet.microsoft.com/download/dotnet/8.0)
 
 ---
 
-## 🚀 Instalação
+## Instalação
 
 ### Instalação Rápida (Recomendado)
 
@@ -78,7 +78,7 @@
 
 ---
 
-## 🎮 Uso
+## Uso
 
 ### Primeira Execução
 
@@ -109,7 +109,7 @@ WindowY=40
 - Verifique se `@Resources/hwstats.txt` existe e está sendo atualizado
 - Tente reiniciar o TempBridge
 
-**Disco sempre 0 KB/s?**
+**Disco sempre 0 MB/s?**
 - Execute `fix_disk_monitoring.bat` como Administrador
 - Reinicie seu computador
 
@@ -119,7 +119,7 @@ WindowY=40
 
 ---
 
-## 🛠 Compilando do Código Fonte
+## Compilando do Código Fonte
 
 ### Pré-requisitos
 
@@ -147,7 +147,7 @@ A saída estará na pasta `dist/`.
 
 ---
 
-## 📂 Estrutura do Projeto
+## Estrutura do Projeto
 
 ```
 halflife-monitoring/
@@ -167,7 +167,7 @@ halflife-monitoring/
 
 ---
 
-## 🤝 Contribuindo
+## Contribuindo
 
 Contribuições são bem-vindas! Por favor:
 
@@ -179,24 +179,24 @@ Contribuições são bem-vindas! Por favor:
 
 ---
 
-## 📜 Licença
+## Licença
 
 Este projeto está licenciado sob a **Licença MIT** - veja o arquivo [LICENSE](LICENSE) para detalhes.
 
 ---
 
-## 🙏 Agradecimentos
+## Agradecimentos
 
 - [LibreHardwareMonitorLib](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) - Biblioteca de monitoramento de hardware
 - [Rainmeter](https://www.rainmeter.net/) - Plataforma de customização de desktop
 
 ---
 
-## 📧 Suporte
+## Suporte
 
 - **Issues**: [GitHub Issues](../../issues)
 - **Discussões**: [GitHub Discussions](../../discussions)
 
 ---
 
-<p align="center">Feito com ❤️ por <a href="https://github.com/seuusuario">Kaic</a></p>
+<p align="center">Feito por <a href="https://github.com/seuusuario">Kaic</a></p>
