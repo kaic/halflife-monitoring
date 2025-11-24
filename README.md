@@ -112,8 +112,8 @@ WindowY=40
 - Try restarting TempBridge
 
 **Disk always 0 MB/s?**
-
-- Run `fix_disk_monitoring.bat` as Administrator
+- Open Command Prompt as Administrator
+- Run: `lodctr /r`
 - Restart your computer
 
 **Skin not loading?**
@@ -140,11 +140,7 @@ cd halflife-monitoring
 # Build TempBridge
 cd TempBridge
 dotnet restore
-dotnet build -c Release
-
-# Create release package
-cd ../scripts
-build-release.bat
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ../dist/TempBridge
 ```
 
 Output will be in `dist/` folder.

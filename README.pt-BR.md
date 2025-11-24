@@ -110,7 +110,8 @@ WindowY=40
 - Tente reiniciar o TempBridge
 
 **Disco sempre 0 MB/s?**
-- Execute `fix_disk_monitoring.bat` como Administrador
+- Abra o CMD como Administrador
+- Execute: `lodctr /r`
 - Reinicie seu computador
 
 **Skin não carrega?**
@@ -136,11 +137,7 @@ cd halflife-monitoring
 # Compile o TempBridge
 cd TempBridge
 dotnet restore
-dotnet build -c Release
-
-# Crie o pacote de release
-cd ../scripts
-build-release.bat
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ../dist/TempBridge
 ```
 
 A saída estará na pasta `dist/`.
