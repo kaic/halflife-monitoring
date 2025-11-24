@@ -18,8 +18,8 @@ Português: [README.pt-BR.md](README.pt-BR.md)
 - Rainmeter 4.5+.
 
 ## Installation
-1) **Packaged**: open `HalfLifeMonitoring_1.0.rmskin` and follow the Rainmeter installer.  
-2) **Manual**: copy `HalfLifeMonitoring.ini` to `Documents\Rainmeter\Skins\HalfLifeMonitoring\` and load the skin in Rainmeter.
+1) **Packaged (automatic)**: open `HalfLifeMonitoring_1.0.rmskin` and follow the Rainmeter installer. This deploys the skin and assets for you.  
+2) **Manual (alternative)**: copy `HalfLifeMonitoring.ini` to `Documents\Rainmeter\Skins\HalfLifeMonitoring\` and load the skin in Rainmeter. Use this if you prefer to inspect/edit the source directly.
 
 ## How to use
 - On load, the overlay is placed top-right (`WindowX/Y`) with `AlwaysOnTop` and `ClickThrough` enabled so it does not block clicks.
@@ -33,9 +33,17 @@ Português: [README.pt-BR.md](README.pt-BR.md)
 - Behavior: toggle `ClickThrough` or `Draggable` by changing `OnRefreshAction`.
 
 ## File layout
-- `HalfLifeMonitoring.ini` — skin source code.
-- `HalfLifeMonitoring_1.0.rmskin` — installable package.
+- `HalfLifeMonitoring.ini` — skin source code (what ships inside the `.rmskin`).
+- `HalfLifeMonitoring_1.0.rmskin` — installable package (auto-setup).
 - `HalfLifeMonitoring.png` — screenshot.
+
+## Publish a GitHub Release (for downloads)
+1) Push this repo to GitHub.  
+2) In the repo page, go to **Releases** → **Draft a new release**.  
+3) Tag: `v1.0.0` (or current version), title: “Half-Life Monitoring 1.0.0”.  
+4) Description: short changelog/notes.  
+5) Upload `HalfLifeMonitoring_1.0.rmskin` as a binary asset.  
+6) Publish the release so users can download the package directly.
 
 ## Contributing
 Issues and PRs are welcome. Feel free to tweak counters, colors, layout, or add variants.
