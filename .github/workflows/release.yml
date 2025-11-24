@@ -21,7 +21,7 @@ jobs:
 
     - name: Publish TempBridge
       run: |
-        dotnet publish TempBridge/TempBridge.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist/TempBridge
+        dotnet publish TempBridge/TempBridge.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=false -o dist/TempBridge
 
     - name: Prepare Skin Structure
       run: |
