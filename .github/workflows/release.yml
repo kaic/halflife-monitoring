@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Publish TempBridge
+      run: |
+        dotnet publish TempBridge/TempBridge.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist/TempBridge
+
+    - name: Prepare Skin Structure
+      run: |
+        New-Item -ItemType Directory -Force -Path staging/Skins/HalfLifeMonitoring
+        Copy-Item "HalfLifeMonitoring.ini" -Destination "staging/Skins/HalfLifeMonitoring/"
+        Copy-Item "HalfLifeMonitoring.png" -Destination "staging/Skins/HalfLifeMonitoring/"
+        Copy-Item -Recurse "@Resources" -Destination "staging/Skins/HalfLifeMonitoring/"
+        Copy-Item -Recurse "dist/TempBridge" -Destination "staging/Skins/HalfLifeMonitoring/"
+        
+        # Copy scripts to root of skin for easy access
+        Copy-Item "TempBridge/install.bat" -Destination "staging/Skins/HalfLifeMonitoring/TempBridge/"
+        Copy-Item "TempBridge/uninstall.bat" -Destination "staging/Skins/HalfLifeMonitoring/TempBridge/"
+
+    - name: Create RMSKIN.ini
+      run: |
+        $version = "${{ github.ref_name }}".TrimStart('v')
+        $content = @"
+        [rmskin]
+        Name=HalfLife Monitoring
+        Author=Kaic
+        Version=$version
+        LoadType=Skin
+        Load=HalfLifeMonitoring\HalfLifeMonitoring.ini
+        MinimumRainmeter=4.5.0
+        MinimumWindows=10.0
+        "@
+        Set-Content -Path staging/RMSKIN.ini -Value $content
+
+    - name: Create .rmskin Package
+      run: |
+        $version = "${{ github.ref_name }}".TrimStart('v')
+        $packageName = "HalfLifeMonitoring_$version.rmskin"
+        Compress-Archive -Path staging/* -DestinationPath $packageName
+        echo "PACKAGE_NAME=$packageName" >> $env:GITHUB_ENV
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: ${{ env.PACKAGE_NAME }}
+        generate_release_notes: true

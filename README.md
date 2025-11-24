@@ -1,54 +1,202 @@
-# Half-Life Monitoring (Rainmeter)
+# HalfLife Monitoring
 
-Minimal Half-Life style overlay to watch CPU, GPU, RAM, disk, and network usage right on the desktop.
+<p align="center">
+  <img src="HalfLifeMonitoring.png" alt="HalfLife Monitoring" width="400">
+</p>
 
-Português: [README.pt-BR.md](README.pt-BR.md)
+<p align="center">
+  <strong>Sistema de monitoramento de hardware para Windows com overlay Rainmeter</strong>
+</p>
 
-![Skin preview](HalfLifeMonitoring.png)
+<p align="center">
+  <a href="README.pt-BR.md">🇧🇷 Português</a> •
+  <a href="#features">Features</a> •
+  <a href="#installation">Installation</a> •
+  <a href="#usage">Usage</a>
+</p>
 
-## Features
-- CPU and GPU percentages with horizontal bars.
-- RAM in GB (used/total) plus a percentage bar.
-- Disk: aggregated read and write (KB/s).
-- Network: download and upload (KB/s) in a single line.
-- Always on the top-right corner, translucent background, with click-through enabled.
+---
 
-## Requirements
-- Windows 10/11 (UsageMonitor relies on Windows performance counters).
-- Rainmeter 4.5+.
+## ✨ Features
 
-## Installation
-Download: https://github.com/kaic/halflife-monitoring/releases
+- **CPU**: Usage % + Temperature °C
+- **GPU**: Usage % + Temperature °C *(NVIDIA/AMD/Intel)*
+- **RAM**: Usage in GB
+- **Disk**: Read/Write activity in MB/s
+- **Network**: Download/Upload in KB/s
 
-1) **Packaged (automatic)**: open `HalfLifeMonitoring_1.0.rmskin` and follow the Rainmeter installer. This deploys the skin and assets for you.  
-2) **Manual (alternative)**: copy `HalfLifeMonitoring.ini` to `Documents\Rainmeter\Skins\HalfLifeMonitoring\` and load the skin in Rainmeter. Use this if you prefer to inspect/edit the source directly.
+### What makes it special?
 
-## How to use
-- On load, the overlay is placed top-right (`WindowX/Y`) with `AlwaysOnTop` and `ClickThrough` enabled so it does not block clicks.
-- Refresh runs every 300 ms (`Update=300`).
-- If GPU stays at 0%, adjust `Instance` in `measureGPUUsage` to the correct GPU counter instance (see Performance Monitor/UsageMonitor).
+- 🎯 **Real GPU monitoring** - Uses LibreHardwareMonitorLib for accurate readings
+- ⚡ **Lightweight** - Minimal resource usage (~10MB RAM)
+- 🎨 **Customizable** - Edit colors, position, and metrics easily
+- 🔄 **Auto-start** - Runs on Windows startup
+- 🆓 **Open Source** - MIT License
 
-## Quick customization
-- Colors and transparency: `textColor`, `barColor`, `bgColor`.
-- Font/size: `fontName`, `textSize`.
-- Dimensions/padding: `width`, `height`, plus `WindowX`/`WindowY`.
-- Behavior: toggle `ClickThrough` or `Draggable` by changing `OnRefreshAction`.
+---
 
-## File layout
-- `HalfLifeMonitoring.ini` — skin source code (what ships inside the `.rmskin`).
-- `HalfLifeMonitoring_1.0.rmskin` — installable package (auto-setup).
-- `HalfLifeMonitoring.png` — screenshot.
+## 📋 Requirements
 
-## Publish a GitHub Release (for downloads)
-1) Push this repo to GitHub.  
-2) In the repo page, go to **Releases** → **Draft a new release**.  
-3) Tag: `v1.0.0` (or current version), title: “Half-Life Monitoring 1.0.0”.  
-4) Description: short changelog/notes.  
-5) Upload `HalfLifeMonitoring_1.0.rmskin` as a binary asset.  
-6) Publish the release so users can download the package directly.
+- **Windows 10/11** (x64)
+- **Rainmeter 4.5+** - [Download here](https://www.rainmeter.net/)
+- **.NET 8.0 Runtime** - [Download here](https://dotnet.microsoft.com/download/dotnet/8.0)
 
-## Contributing
-Issues and PRs are welcome. Feel free to tweak counters, colors, layout, or add variants.
+---
 
-## License
-MIT — see `LICENSE`.
+## 🚀 Installation
+
+### Quick Install (Recommended)
+
+1. **Download** the latest release: [HalfLifeMonitoring-Release.zip](../../releases/latest)
+2. **Extract** the ZIP file
+3. **Run** `setup.bat` as Administrator
+4. **Done!** The overlay will appear in the top-right corner
+
+### Manual Install
+
+<details>
+<summary>Click to expand manual installation steps</summary>
+
+#### 1. Install Rainmeter Skin
+
+- Double-click `HalfLifeMonitoring.rmskin`
+- Follow the Rainmeter installer prompts
+
+#### 2. Install TempBridge
+
+- Copy the `TempBridge` folder to `C:\Program Files\HalfLifeMonitoring\`
+- Run `install.bat` to add to Windows Startup
+- Start `TempBridge.exe`
+
+#### 3. Load the Skin
+
+- Open Rainmeter
+- Find "HalfLifeMonitoring" in the skin list
+- Click "Load"
+
+</details>
+
+---
+
+## 🎮 Usage
+
+### First Run
+
+After installation, you should see:
+- TempBridge running (console window or tray icon)
+- Rainmeter overlay in the top-right corner
+- All metrics updating in real-time
+
+### Customization
+
+Edit `HalfLifeMonitoring.ini` to customize:
+
+```ini
+[Variables]
+; Change colors (R,G,B,Alpha)
+textColor=0,255,255,190
+barColor=0,255,255,160
+
+; Change position
+WindowX=(#SCREENAREAWIDTH# - #width# - 20)
+WindowY=40
+```
+
+### Troubleshooting
+
+**GPU shows 0%?**
+- Ensure TempBridge is running
+- Check that `@Resources/hwstats.txt` exists and is being updated
+- Try restarting TempBridge
+
+**Disk always 0 KB/s?**
+- Run `fix_disk_monitoring.bat` as Administrator
+- Restart your computer
+
+**Skin not loading?**
+- Refresh Rainmeter (right-click → Refresh All)
+- Check Rainmeter logs for errors
+
+---
+
+## 🛠 Building from Source
+
+### Prerequisites
+
+- .NET 8.0 SDK
+- Visual Studio 2022 or VS Code (optional)
+
+### Build Steps
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/halflife-monitoring.git
+cd halflife-monitoring
+
+# Build TempBridge
+cd TempBridge
+dotnet restore
+dotnet build -c Release
+
+# Create release package
+cd ../scripts
+build-release.bat
+```
+
+Output will be in `dist/` folder.
+
+---
+
+## 📂 Project Structure
+
+```
+halflife-monitoring/
+├── TempBridge/              # C# background service
+│   ├── Program.cs           # Main sensor reading logic
+│   ├── TempBridge.csproj    # Project file
+│   └── install.bat          # Startup installer
+├── HalfLifeMonitoring.ini   # Rainmeter skin
+├── @Resources/              # Skin resources
+│   └── hwstats.txt          # Sensor data (generated)
+├── scripts/                 # Build automation
+│   └── build-release.bat
+├── installer/               # Distribution
+│   └── setup.bat
+└── README.md
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📜 License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- [LibreHardwareMonitorLib](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) - Hardware monitoring library
+- [Rainmeter](https://www.rainmeter.net/) - Desktop customization platform
+
+---
+
+## 📧 Support
+
+- **Issues**: [GitHub Issues](../../issues)
+- **Discussions**: [GitHub Discussions](../../discussions)
+
+---
+
+<p align="center">Made with ❤️ by <a href="https://github.com/yourusername">Kaic</a></p>

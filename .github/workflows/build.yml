@@ -1,0 +1,83 @@
+name: Build TempBridge
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ created ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Restore dependencies
+      working-directory: ./TempBridge
+      run: dotnet restore
+
+    - name: Build
+      working-directory: ./TempBridge
+      run: dotnet build -c Release --no-restore
+
+    - name: Publish
+      working-directory: ./TempBridge
+      run: dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ../dist/TempBridge
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: TempBridge
+        path: dist/TempBridge/
+
+  release:
+    needs: build
+    runs-on: windows-latest
+    if: github.event_name == 'release'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: TempBridge
+        path: dist/TempBridge/
+
+    - name: Create release package
+      shell: pwsh
+      run: |
+        # Create temporary skin directory
+        New-Item -ItemType Directory -Path "temp/HalfLifeMonitoring" -Force
+        New-Item -ItemType Directory -Path "temp/HalfLifeMonitoring/@Resources" -Force
+        
+        # Copy skin files
+        Copy-Item "HalfLifeMonitoring.ini" -Destination "temp/HalfLifeMonitoring/"
+        Copy-Item "@Resources/hwstats.txt" -Destination "temp/HalfLifeMonitoring/@Resources/"
+        
+        # Create .rmskin
+        Compress-Archive -Path "temp/HalfLifeMonitoring/*" -DestinationPath "dist/HalfLifeMonitoring.rmskin"
+        
+        # Copy installer
+        Copy-Item "installer/setup.bat" -Destination "dist/"
+        
+        # Create final release ZIP
+        Compress-Archive -Path "dist/TempBridge","dist/HalfLifeMonitoring.rmskin","dist/setup.bat" -DestinationPath "HalfLifeMonitoring-Release.zip"
+
+    - name: Upload release asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./HalfLifeMonitoring-Release.zip
+        asset_name: HalfLifeMonitoring-Release.zip
+        asset_content_type: application/zip
