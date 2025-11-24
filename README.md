@@ -47,9 +47,9 @@ Minimal Half-Life style overlay theme for [Rainmater](https://www.rainmeter.net/
 
 ### Quick Install (Recommended)
 
-1. **Download** the latest release: [HalfLifeMonitoring-Release.zip](../../releases/latest)
-2. **Extract** the ZIP file
-3. **Run** `setup.bat` as Administrator
+1. **Download** the latest `.rmskin` file: [Releases Page](https://github.com/kaic/halflife-monitoring/releases)
+2. **Double-click** the file to install with Rainmeter
+3. **Follow** the installer prompts (it will set up TempBridge automatically)
 4. **Done!** The overlay will appear in the top-right corner
 
 ### Manual Install

@@ -47,9 +47,9 @@
 
 ### Instalação Rápida (Recomendado)
 
-1. **Baixe** o último release: [HalfLifeMonitoring-Release.zip](../../releases/latest)
-2. **Extraia** o arquivo ZIP
-3. **Execute** `setup.bat` como Administrador
+1. **Baixe** o arquivo `.rmskin` mais recente: [Página de Releases](https://github.com/kaic/halflife-monitoring/releases)
+2. **Clique duas vezes** no arquivo para instalar com o Rainmeter
+3. **Siga** as instruções do instalador (ele configurará o TempBridge automaticamente)
 4. **Pronto!** O overlay aparecerá no canto superior direito
 
 ### Instalação Manual

@@ -4,34 +4,27 @@ echo TempBridge - Desinstalador
 echo ========================================
 echo.
 
-set "SCRIPT_DIR=%~dp0"
-set "STARTUP_FOLDER=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup"
-set "SHORTCUT=%STARTUP_FOLDER%\TempBridge.lnk"
-set "VBS_LAUNCHER=%SCRIPT_DIR%TempBridge_Hidden.vbs"
-
-echo Parando TempBridge...
-taskkill /f /im TempBridge.exe 2>nul
-if %errorlevel% == 0 (
-    echo [OK] TempBridge parado
-) else (
-    echo [INFO] TempBridge nao estava rodando
+:: Verifica Permissoes de Admin
+net session >nul 2>&1
+if %errorLevel% neq 0 (
+    echo [ERRO] Este script precisa ser executado como Administrador!
+    pause
+    exit /b 1
 )
+
+set "TASK_NAME=TempBridgeMonitoring"
+
+echo Parando processo TempBridge...
+taskkill /F /IM TempBridge.exe >nul 2>&1
 
 echo.
-echo Removendo do Startup...
+echo Removendo tarefa agendada...
+schtasks /Delete /TN "%TASK_NAME%" /F
 
-if exist "%SHORTCUT%" (
-    del "%SHORTCUT%"
-    echo [OK] Atalho removido
+if %errorLevel% equ 0 (
+    echo [OK] TempBridge removido da inicializacao.
 ) else (
-    echo [INFO] Atalho nao encontrado
-)
-
-if exist "%VBS_LAUNCHER%" (
-    del "%VBS_LAUNCHER%"
-    echo [OK] Launcher removido
-) else (
-    echo [INFO] Launcher nao encontrado
+    echo [AVISO] Tarefa nao encontrada ou erro ao remover.
 )
 
 echo.

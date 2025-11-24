@@ -1,41 +1,39 @@
 @echo off
 echo ========================================
-echo TempBridge - Instalador de Startup
+echo TempBridge - Instalador de Startup (Admin)
 echo ========================================
 echo.
 
-set "SCRIPT_DIR=%~dp0"
-set "STARTUP_FOLDER=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup"
-set "VBS_LAUNCHER=%SCRIPT_DIR%TempBridge_Hidden.vbs"
-set "SHORTCUT=%STARTUP_FOLDER%\TempBridge.lnk"
-
-echo Criando launcher oculto (sem janela de console)...
-echo.
-
-:: Cria VBScript para iniciar TempBridge sem mostrar janela
-> "%VBS_LAUNCHER%" echo Set WshShell = CreateObject("WScript.Shell")
->> "%VBS_LAUNCHER%" echo WshShell.Run """%SCRIPT_DIR%TempBridge.exe""", 0, False
-
-if exist "%VBS_LAUNCHER%" (
-    echo [OK] Launcher oculto criado: TempBridge_Hidden.vbs
-) else (
-    echo [ERRO] Falha ao criar launcher
+:: Verifica Permissoes de Admin
+net session >nul 2>&1
+if %errorLevel% neq 0 (
+    echo [ERRO] Este script precisa ser executado como Administrador!
+    echo Clique com o botao direito e selecione "Executar como Administrador".
     pause
     exit /b 1
 )
 
-echo.
-echo Criando atalho no Startup do Windows...
+set "SCRIPT_DIR=%~dp0"
+set "EXE_PATH=%SCRIPT_DIR%TempBridge.exe"
+set "TASK_NAME=TempBridgeMonitoring"
+
+echo Configurando tarefa agendada para iniciar com Windows (Admin)...
 echo.
 
-:: Cria o atalho usando PowerShell
-powershell -Command "$WshShell = New-Object -comObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%SHORTCUT%'); $Shortcut.TargetPath = '%VBS_LAUNCHER%'; $Shortcut.WorkingDirectory = '%SCRIPT_DIR%'; $Shortcut.Save()"
+:: Remove tarefa anterior se existir
+schtasks /Delete /TN "%TASK_NAME%" /F >nul 2>&1
 
-if exist "%SHORTCUT%" (
-    echo [OK] Atalho criado com sucesso!
-    echo Local: %SHORTCUT%
+:: Cria nova tarefa:
+:: /SC ONLOGON - Inicia ao logar
+:: /RL HIGHEST - Executa com privilegios maximos (Admin)
+:: /TR ... - Caminho do executavel
+schtasks /Create /TN "%TASK_NAME%" /TR "'%EXE_PATH%'" /SC ONLOGON /RL HIGHEST /F
+
+if %errorLevel% equ 0 (
+    echo [OK] Tarefa agendada criada com sucesso!
+    echo Nome: %TASK_NAME%
     echo.
-    echo TempBridge sera iniciado automaticamente (OCULTO) no proximo boot.
+    echo TempBridge iniciara automaticamente com privilegios de Admin no proximo login.
     echo.
     echo Deseja iniciar agora? (S/N^)
     choice /C SN /M "Iniciar TempBridge"
@@ -43,19 +41,18 @@ if exist "%SHORTCUT%" (
     if errorlevel 2 goto :end
     if errorlevel 1 goto :start
 ) else (
-    echo [ERRO] Falha ao criar atalho.
+    echo [ERRO] Falha ao criar tarefa agendada.
     pause
     exit /b 1
 )
 
 :start
 echo.
-echo Iniciando TempBridge (oculto)...
-start "" "%VBS_LAUNCHER%"
+echo Iniciando TempBridge...
+schtasks /Run /TN "%TASK_NAME%"
 timeout /t 2 >nul
 echo.
-echo TempBridge esta rodando em segundo plano (SEM janela visivel).
-echo Para verificar, abra o Task Manager e procure por "TempBridge.exe".
+echo TempBridge iniciado via Agendador de Tarefas.
 goto :end
 
 :end
@@ -65,8 +62,7 @@ echo Instalacao concluida!
 echo ========================================
 echo.
 echo IMPORTANTE:
-echo - TempBridge roda OCULTO (sem janela de console)
+echo - TempBridge roda em background com permissoes de Admin
 echo - Para parar: Task Manager ^> TempBridge.exe ^> End Task
-echo - Para ver logs: Execute TempBridge.exe manualmente
 echo.
 pause
