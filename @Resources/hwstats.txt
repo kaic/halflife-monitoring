@@ -1,0 +1,4 @@
+CpuTemp=0.0
+GpuTemp=0.0
+CpuUsage=0.0
+GpuUsage=0.0
