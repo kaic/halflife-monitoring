@@ -18,6 +18,8 @@ Português: [README.pt-BR.md](README.pt-BR.md)
 - Rainmeter 4.5+.
 
 ## Installation
+Download: https://github.com/kaic/halflife-monitoring/releases
+
 1) **Packaged (automatic)**: open `HalfLifeMonitoring_1.0.rmskin` and follow the Rainmeter installer. This deploys the skin and assets for you.  
 2) **Manual (alternative)**: copy `HalfLifeMonitoring.ini` to `Documents\Rainmeter\Skins\HalfLifeMonitoring\` and load the skin in Rainmeter. Use this if you prefer to inspect/edit the source directly.
 

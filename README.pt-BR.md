@@ -18,6 +18,8 @@ English: [README.md](README.md)
 - Rainmeter 4.5+.
 
 ## Instalação
+Download: https://github.com/kaic/halflife-monitoring/releases
+
 1) **Pacote pronto**: abra `HalfLifeMonitoring_1.0.rmskin` e siga o instalador do Rainmeter.  
 2) **Manual**: copie `HalfLifeMonitoring.ini` para `Documentos\\Rainmeter\\Skins\\HalfLifeMonitoring\\` e carregue o skin pelo Rainmeter.
 
