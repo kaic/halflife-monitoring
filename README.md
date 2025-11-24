@@ -1,6 +1,6 @@
 # Half-Life Monitoring (Rainmeter)
 
-Minimal Half-Life style overlay to watch CPU, GPU, RAM, disk, and network usage right on the desktop.
+Minimal Half-Life style overlay theme for [Rainmater](https://www.rainmeter.net/) to watch CPU, GPU, RAM, disk, and network usage right on the desktop.
 
 Português: [README.pt-BR.md](README.pt-BR.md)
 
