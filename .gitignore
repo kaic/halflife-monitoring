@@ -1,0 +1,20 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+dist/
+build/
+
+# Rainmeter packages
+*.rmskin
+
+# User specific files
+*.user
+*.suo
+*.userprefs
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
