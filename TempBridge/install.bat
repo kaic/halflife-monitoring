@@ -24,6 +24,8 @@ set "DOCS_PATH=%USERPROFILE%\Documents"
 set "LOG_FILE=%SCRIPT_DIR%install.log"
 
 set "PS_CMD=%POWERSHELL_PATH% -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command \"$env:TEMPBRIDGE_DOCUMENTS='%DOCS_PATH%'; Start-Process -FilePath '%EXE_PATH%' -WorkingDirectory '%SCRIPT_DIR%' -WindowStyle Hidden\""
+set "RUN_KEY=HKCU\Software\Microsoft\Windows\CurrentVersion\Run"
+set "RUN_VALUE=TempBridgeMonitoring"
 
 if not exist "%EXE_PATH%" (
     echo [ERROR] Could not find the executable at "%EXE_PATH%".
@@ -43,17 +45,16 @@ echo.
 :: Remove previous task if it exists
 schtasks /Delete /TN "%TASK_NAME%" /F >nul 2>&1
 
-:: Create new task under the logged user with highest privilege
-:: /DELAY 0000:05 adds a small delay to avoid race with user profile initialization (format mmmm:ss)
-schtasks /Create /TN "%TASK_NAME%" /TR "%PS_CMD%" /SC ONLOGON /RL HIGHEST /DELAY 0000:05 /RU "%USERNAME%" /F > "%LOG_FILE%" 2>&1
+echo Configuring Run key entry to start hidden at logon...
+reg add "%RUN_KEY%" /v "%RUN_VALUE%" /t REG_SZ /d "%PS_CMD%" /f > "%LOG_FILE%" 2>&1
 if %errorLevel% neq 0 (
     type "%LOG_FILE%"
-    echo [ERROR] Failed to create scheduled task. If prompted for a password, provide your Windows password.
+    echo [ERROR] Failed to configure startup via registry.
     pause
     exit /b 1
 )
 
-echo [OK] Scheduled task created to start with Windows.
+echo [OK] Run key configured: %RUN_KEY%\%RUN_VALUE%
 echo Starting TempBridge now in the background...
 %PS_CMD%
 if %errorLevel% equ 0 (
