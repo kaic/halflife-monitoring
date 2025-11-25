@@ -60,16 +60,11 @@ jobs:
         $version = "${{ github.ref_name }}".TrimStart('v')
         $packageName = "HalfLifeMonitoring_$version.rmskin"
         Compress-Archive -Path staging/Skins/* -DestinationPath $packageName
-        echo "PACKAGE_NAME=$packageName" >> $env:GITHUB_ENV
-
     - name: Create Release and Upload Assets
       env:
         GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
       run: |
-        # Create the GitHub release (the .rmskin package is already in $PACKAGE_NAME)
-        gh release create "${{ github.ref_name }}" "${{ env.PACKAGE_NAME }}" --generate-notes
+        # Create the GitHub release (no .rmskin package uploaded automatically)
+        gh release create "${{ github.ref_name }}" --generate-notes
         # Upload TempBridge binaries and installer scripts
-        gh release upload "${{ github.ref_name }}" "dist/TempBridge/TempBridge.exe" "dist/TempBridge/install.bat" "dist/TempBridge/uninstall.bat" --clobber
-        # Upload the .rmskin package (already attached via create, but ensure it's present)
-        gh release upload "${{ github.ref_name }}" "${{ env.PACKAGE_NAME }}" --clobber
         gh release upload "${{ github.ref_name }}" "dist/TempBridge/TempBridge.exe" "dist/TempBridge/install.bat" "dist/TempBridge/uninstall.bat" --clobber
