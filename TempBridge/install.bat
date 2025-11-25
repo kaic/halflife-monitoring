@@ -65,7 +65,7 @@ schtasks /Delete /TN "%TASK_NAME%" /F >nul 2>&1
 
 :: Create new task under the logged user with highest privilege, using helper runner to avoid quote issues
 :: /DELAY 0000:05 adds a small delay to avoid race with user profile initialization (format mmmm:ss)
-schtasks /Create /TN "%TASK_NAME%" /TR "\"%TASK_RUNNER%\"" /SC ONLOGON /RL HIGHEST /DELAY 0000:05 /RU "%USERNAME%" /IT /F > "%LOG_FILE%" 2>&1
+schtasks /Create /TN "%TASK_NAME%" /TR "\"%TASK_RUNNER%\"" /SC ONLOGON /RL HIGHEST /DELAY 0000:05 /RU "%USERNAME%" /F > "%LOG_FILE%" 2>&1
 if %errorLevel% neq 0 (
     type "%LOG_FILE%"
     echo [ERROR] Failed to create scheduled task. If prompted for a password, provide your Windows password.
@@ -74,12 +74,24 @@ if %errorLevel% neq 0 (
 )
 
 echo [OK] Scheduled task created to start with Windows.
-echo Starting TempBridge now in the background...
-%START_CMD%
-if %errorLevel% equ 0 (
-    echo [OK] TempBridge started (you can close this window).
+echo [INFO] Task details written to: %LOG_FILE%
+
+echo Running scheduled task now for verification...
+schtasks /Run /TN "%TASK_NAME%" >> "%LOG_FILE%" 2>&1
+timeout /t 3 >nul
+
+if exist "%TASK_RUNNER%" (
+    echo [INFO] Helper exists: %TASK_RUNNER%
 ) else (
-    echo [WARN] Could not start TempBridge automatically. Rerun this installer as Admin and try again.
+    echo [WARN] Helper missing: %TASK_RUNNER%
+)
+
+if exist "%SCRIPT_DIR%run_tempbridge.log" (
+    echo [INFO] Found run log: %SCRIPT_DIR%run_tempbridge.log
+    echo Showing last lines:
+    powershell -NoProfile -Command "Get-Content -Path '%SCRIPT_DIR%run_tempbridge.log' -Tail 5"
+) else (
+    echo [WARN] run_tempbridge.log not found yet. It will be created when the task actually runs.
 )
 
 echo.
