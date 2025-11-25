@@ -40,8 +40,8 @@ schtasks /Delete /TN "%TASK_NAME%" /F >nul 2>&1
 :: /RL HIGHEST - Executa com privilegios maximos (Admin)
 :: /TR ... - Caminho do executavel
 schtasks /Create /TN "%TASK_NAME%" /TR "%EXE_PATH%" /SC ONLOGON /RL HIGHEST /F
-
 if %errorLevel% equ 0 (
+    schtasks /Run /TN "%TASK_NAME%"
     echo [OK] Tarefa agendada criada com sucesso!
     echo Nome: %TASK_NAME%
     echo.
