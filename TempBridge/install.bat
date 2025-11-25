@@ -24,6 +24,7 @@ set "LOG_FILE=%SCRIPT_DIR%install.log"
 set "TARGET_DOCS=%USERPROFILE%\Documents"
 set "START_CMD=%POWERSHELL_PATH% -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command \"$env:TEMPBRIDGE_DOCUMENTS='%TARGET_DOCS%'; Start-Process -FilePath '%EXE_PATH%' -WorkingDirectory '%SCRIPT_DIR%' -WindowStyle Hidden\""
 set "TASK_RUNNER=%SCRIPT_DIR%run_tempbridge.cmd"
+set "TASK_CMD=%SystemRoot%\System32\cmd.exe /c"
 
 if not exist "%EXE_PATH%" (
     echo [ERROR] Could not find the executable at "%EXE_PATH%".
@@ -56,6 +57,7 @@ echo [INFO] Creating helper runner for Task Scheduler...
     echo "%EXE_PATH%" ^>^> "%%LOG_FILE%%" 2^>^&1
     echo echo [%%date%% %%time%%] exit code %%errorlevel%% ^>^> "%%LOG_FILE%%"
 ) > "%TASK_RUNNER%"
+for %%I in ("%TASK_RUNNER%") do set "TASK_RUNNER_FULL=%%~fI"
 
 echo Setting scheduled task to start with Windows (Admin)...
 echo.
@@ -65,7 +67,7 @@ schtasks /Delete /TN "%TASK_NAME%" /F >nul 2>&1
 
 :: Create new task under the logged user with highest privilege, using helper runner to avoid quote issues
 :: /DELAY 0000:05 adds a small delay to avoid race with user profile initialization (format mmmm:ss)
-schtasks /Create /TN "%TASK_NAME%" /TR "\"%TASK_RUNNER%\"" /SC ONLOGON /RL HIGHEST /DELAY 0000:05 /RU "%USERNAME%" /F > "%LOG_FILE%" 2>&1
+schtasks /Create /TN "%TASK_NAME%" /TR "\"%TASK_CMD% \"\"%TASK_RUNNER_FULL%\"\"\"" /SC ONLOGON /RL HIGHEST /DELAY 0000:05 /RU "%USERNAME%" /F > "%LOG_FILE%" 2>&1
 if %errorLevel% neq 0 (
     type "%LOG_FILE%"
     echo [ERROR] Failed to create scheduled task. If prompted for a password, provide your Windows password.
