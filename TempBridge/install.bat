@@ -37,12 +37,34 @@ if exist "%OLD_VBS%" del "%OLD_VBS%"
 if exist "%REGISTER_PS%" del "%REGISTER_PS%"
 if exist "%SCRIPT_DIR%run_tempbridge.log" del "%SCRIPT_DIR%run_tempbridge.log"
 
-if not exist "%RUNNER_PS%" (
-    echo [ERROR] Missing helper: %RUNNER_PS%
-    echo Make sure run_tempbridge.ps1 is present.
-    pause
-    exit /b 1
-)
+echo [INFO] Creating run_tempbridge.ps1 helper...
+(
+    echo param(^)
+    echo $ErrorActionPreference = 'Stop'
+    echo $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+    echo $exePath = Join-Path $scriptDir 'TempBridge.exe'
+    echo $logPath = Join-Path $scriptDir 'run_tempbridge.log'
+    echo function Write-Log { param([string]$msg^) $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'; Add-Content -LiteralPath $logPath -Value "[$ts] $msg" }
+    echo try {
+    echo ^    if (-not (Test-Path -LiteralPath $exePath^)) { Write-Log "ERROR: TempBridge.exe not found at $exePath"; exit 1 }
+    echo ^    $docs = $env:TEMPBRIDGE_DOCUMENTS
+    echo ^    if ([string]::IsNullOrWhiteSpace($docs^)) { $docs = [Environment]::GetFolderPath('MyDocuments'^) }
+    echo ^    Write-Log "Start user=$env:USERNAME docs=$docs exe=$exePath"
+    echo ^    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    echo ^    $psi.FileName = $exePath
+    echo ^    $psi.WorkingDirectory = $scriptDir
+    echo ^    $psi.UseShellExecute = $false
+    echo ^    $psi.WindowStyle = 'Hidden'
+    echo ^    $psi.CreateNoWindow = $true
+    echo ^    $psi.Environment['TEMPBRIDGE_DOCUMENTS'] = $docs
+    echo ^    if (-not [System.Diagnostics.Process]::Start($psi^)) { Write-Log "ERROR: Failed to start TempBridge process."; exit 1 }
+    echo ^    Write-Log "TempBridge launched."
+    echo ^    exit 0
+    echo } catch {
+    echo ^    Write-Log ("ERROR: " + $_.Exception.Message^)
+    echo ^    exit 1
+    echo }
+) > "%RUNNER_PS%"
 
 echo [INFO] Creating PowerShell task registration script...
 (
