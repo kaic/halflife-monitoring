@@ -12,6 +12,23 @@ internal static class Program
 
     public static async Task Main()
     {
+        // Garante que o diretório de trabalho seja o do executável (fix para Task Scheduler)
+        var exePath = AppDomain.CurrentDomain.BaseDirectory;
+        Directory.SetCurrentDirectory(exePath);
+
+        try
+        {
+            await Run();
+        }
+        catch (Exception ex)
+        {
+            var crashLog = Path.Combine(exePath, "crash.log");
+            File.AppendAllText(crashLog, $"[{DateTime.Now}] FATAL ERROR: {ex}\n");
+        }
+    }
+
+    private static async Task Run()
+    {
         // Caminho para o hwstats.txt no @Resources da skin
         var documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         var hwStatsPath = Path.Combine(
