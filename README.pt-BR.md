@@ -1,199 +1,195 @@
-# HalfLife Monitoring
+# HalfLife Monitoring Theme for Rainmeter
 
 <p align="center">
-  <img src="HalfLifeMonitoring.png" alt="HalfLife Monitoring" width="400">
+  <img src="HalfLifeMonitoring.png" alt="HalfLife Monitoring" width="400"/>
 </p>
 
-<p align="center">
-  <strong>Sistema de monitoramento de hardware para Windows com overlay Rainmeter</strong>
-</p>
+Minimal hardware monitoring Half-Life style overlay theme for [Rainmeter](https://www.rainmeter.net/) to watch CPU, GPU, and more.
 
-<p align="center">
-  <a href="README.md">English</a> •
-  <a href="#recursos">Recursos</a> •
-  <a href="#instalação">Instalação</a> •
-  <a href="#uso">Uso</a>
-</p>
+<a href="#features">Features</a>
+<a href="#installation">Installation</a>
+<a href="#usage">Usage</a>
 
 ---
 
-## Recursos
+## Features
 
-- **CPU**: Uso % + Temperatura °C
-- **GPU**: Uso % + Temperatura °C *(NVIDIA/AMD/Intel)*
-- **RAM**: Uso em GB
-- **Disco**: Leitura/Escrita em MB/s
-- **Rede**: Download/Upload em MB/s
+- **CPU**: Usage % + Temperature °C
+- **GPU**: Usage % + Temperature °C *(NVIDIA/AMD/Intel)*
+- **RAM**: Usage in GB
+- **Disk**: Read/Write activity in MB/s
+- **Network**: Download/Upload in MB/s
 
-### Principais Benefícios
+### Key Benefits
 
-- **Monitoramento real de GPU** - Usa LibreHardwareMonitorLib para leituras precisas
-- **Leve** - Uso mínimo de recursos (~10MB RAM)
-- **Personalizável** - Edite cores, posição e métricas facilmente
-- **Início automático** - Executa na inicialização do Windows
-- **Código Aberto** - Licença MIT
+- **Real GPU monitoring** - Uses LibreHardwareMonitorLib for accurate readings
+- **Lightweight** - Minimal resource usage (~10MB RAM)
+- **Customizable** - Edit colors, position, and metrics easily
+- **Auto-start** - Runs on Windows startup
+- **Open Source** - MIT License
 
 ---
 
-## Requisitos
+## Requirements
 
 - **Windows 10/11** (x64)
-- **Rainmeter 4.5+** - [Baixar](https://www.rainmeter.net/)
-- **.NET 8.0 Runtime** - [Baixar](https://dotnet.microsoft.com/download/dotnet/8.0)
+- **Rainmeter 4.5+** - [Download](https://www.rainmeter.net/)
+- **.NET 8.0 Runtime** - [Download](https://dotnet.microsoft.com/download/dotnet/8.0)
 
 ---
 
-## Instalação
+## Installation
 
-### Instalação Rápida (Recomendado)
+### Quick Install (Recommended)
 
-1. **Baixe** o arquivo `.rmskin` mais recente: [Página de Releases](https://github.com/kaic/halflife-monitoring/releases)
-2. **Clique duas vezes** no arquivo para instalar com o Rainmeter
-3. **Siga** as instruções do instalador (ele configurará o TempBridge automaticamente)
-4. **Pronto!** O overlay aparecerá no canto superior direito
+1. **Download** the latest `.rmskin` file: [Releases Page](https://github.com/kaic/halflife-monitoring/releases)
+2. **Double-click** the file to install with Rainmeter
+3. **Follow** the installer prompts (it will set up TempBridge automatically)
+4. **Done!** The overlay will appear in the top-right corner
 
-### Instalação Manual
+### Manual Install
 
 <details>
-<summary>Clique para expandir os passos de instalação manual</summary>
+<summary>Click to expand manual installation steps</summary>
 
-#### 1. Instalar Skin do Rainmeter
+#### 1. Install Rainmeter Skin
 
-- Dê duplo clique em `HalfLifeMonitoring.rmskin`
-- Siga as instruções do instalador do Rainmeter
+- Double-click `HalfLifeMonitoring.rmskin`
+- Follow the Rainmeter installer prompts
 
-#### 2. Instalar TempBridge
+#### 2. Install TempBridge
 
-- Copie a pasta `TempBridge` para `C:\Program Files\HalfLifeMonitoring\`
-- Execute `install.bat` para adicionar à Inicialização do Windows
-- Inicie `TempBridge.exe`
+- Copy the `TempBridge` folder to `C:\Program Files\HalfLifeMonitoring\`
+- Run `install.bat` to add to Windows Startup
+- Start `TempBridge.exe`
 
-#### 3. Carregar a Skin
+#### 3. Load the Skin
 
-- Abra o Rainmeter
-- Encontre "HalfLifeMonitoring" na lista de skins
-- Clique em "Load"
+- Open Rainmeter
+- Find "HalfLifeMonitoring" in the skin list
+- Click "Load"
 
 </details>
 
 ---
 
-## Uso
+## Usage
 
-### Primeira Execução
+### First Run
 
-Após a instalação, você deve ver:
-- TempBridge rodando (janela do console ou ícone na bandeja)
-- Overlay do Rainmeter no canto superior direito
-- Todas as métricas atualizando em tempo real
+After installation, you should see:
 
-### Personalização
+- TempBridge running (console window or tray icon)
+- Rainmeter overlay in the top-right corner
+- All metrics updating in real-time
 
-Edite `HalfLifeMonitoring.ini` para personalizar:
+### Customization
+
+Edit `HalfLifeMonitoring.ini` to customize:
 
 ```ini
 [Variables]
-; Mudar cores (R,G,B,Alfa)
+; Change colors (R,G,B,Alpha)
 textColor=0,255,255,190
 barColor=0,255,255,160
 
-; Mudar posição
+; Change position
 WindowX=(#SCREENAREAWIDTH# - #width# - 20)
 WindowY=40
 ```
 
-### Solução de Problemas
+### Troubleshooting
 
-**GPU mostra 0%?**
-- Certifique-se que TempBridge está rodando
-- Verifique se `@Resources/hwstats.txt` existe e está sendo atualizado
-- Tente reiniciar o TempBridge
+**GPU shows 0%?**
+- Ensure TempBridge is running
+- Check that `@Resources/hwstats.txt` exists and is being updated
+- Try restarting TempBridge
 
-**Disco sempre 0 MB/s?**
-- Abra o CMD como Administrador
-- Execute: `lodctr /r`
-- Reinicie seu computador
+**Disk always 0 MB/s?**
+- Open Command Prompt as Administrator
+- Run: `lodctr /r`
+- Restart your computer
 
-**Skin não carrega?**
-- Atualize o Rainmeter (clique direito → Refresh All)
-- Verifique os logs do Rainmeter para erros
+**Skin not loading?**
+- Refresh Rainmeter (right-click → Refresh All)
+- Check Rainmeter logs for errors
 
 ---
 
-## Compilando do Código Fonte
+## Building from Source
 
-### Pré-requisitos
+### Prerequisites
 
 - .NET 8.0 SDK
-- Visual Studio 2022 ou VS Code (opcional)
+- Visual Studio 2022 or VS Code (optional)
 
-### Passos de Compilação
+### Build Steps
 
 ```bash
-# Clone o repositório
-git clone https://github.com/seuusuario/halflife-monitoring.git
+# Clone the repository
+git clone https://github.com/kaic/halflife-monitoring.git
 cd halflife-monitoring
 
-# Compile o TempBridge
+# Build TempBridge
 cd TempBridge
 dotnet restore
 dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ../dist/TempBridge
 ```
 
-A saída estará na pasta `dist/`.
+Output will be in `dist/` folder.
 
 ---
 
-## Estrutura do Projeto
+## Project Structure
 
 ```
 halflife-monitoring/
-├── TempBridge/              # Serviço C# em segundo plano
-│   ├── Program.cs           # Lógica principal de leitura de sensores
-│   ├── TempBridge.csproj    # Arquivo de projeto
-│   └── install.bat          # Instalador de inicialização
-├── HalfLifeMonitoring.ini   # Skin do Rainmeter
-├── @Resources/              # Recursos da skin
-│   └── hwstats.txt          # Dados dos sensores (gerado)
-├── scripts/                 # Automação de build
+├── TempBridge/              # C# background service
+│   ├── Program.cs           # Main sensor reading logic
+│   ├── TempBridge.csproj    # Project file
+│   └── install.bat          # Startup installer
+├── HalfLifeMonitoring.ini   # Rainmeter skin
+├── @Resources/              # Skin resources
+│   └── hwstats.txt          # Sensor data (generated)
+├── scripts/                 # Build automation
 │   └── build-release.bat
-├── installer/               # Distribuição
+├── installer/               # Distribution
 │   └── setup.bat
-└── README.pt-BR.md
+└── README.md
 ```
 
 ---
 
-## Contribuindo
+## Contributing
 
-Contribuições são bem-vindas! Por favor:
+Contributions are welcome! Please:
 
-1. Faça um Fork do repositório
-2. Crie uma branch de feature (`git checkout -b feature/funcionalidade-incrivel`)
-3. Commit suas mudanças (`git commit -m 'Adiciona funcionalidade incrível'`)
-4. Push para a branch (`git push origin feature/funcionalidade-incrivel`)
-5. Abra um Pull Request
-
----
-
-## Licença
-
-Este projeto está licenciado sob a **Licença MIT** - veja o arquivo [LICENSE](LICENSE) para detalhes.
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ---
 
-## Agradecimentos
+## License
 
-- [LibreHardwareMonitorLib](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) - Biblioteca de monitoramento de hardware
-- [Rainmeter](https://www.rainmeter.net/) - Plataforma de customização de desktop
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## Suporte
+## Acknowledgments
+
+- [LibreHardwareMonitorLib](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) - Hardware monitoring library
+- [Rainmeter](https://www.rainmeter.net/) - Desktop customization platform
+
+---
+
+## Support
 
 - **Issues**: [GitHub Issues](../../issues)
-- **Discussões**: [GitHub Discussions](../../discussions)
+- **Discussions**: [GitHub Discussions](../../discussions)
 
 ---
 
-<p align="center">Feito por <a href="https://github.com/seuusuario">Kaic</a></p>
+<p align="center">Feito por <a href="http://kaic.me/">Kaic</a></p>

@@ -1,15 +1,11 @@
-# HalfLife Monitoring
+# HalfLife Monitoring Theme for Rainmeter
 
 <p align="center">
-  <img src="HalfLifeMonitoring.png" alt="HalfLife Monitoring" width="400">
-</p>
-Minimal Half-Life style overlay theme for [Rainmater](https://www.rainmeter.net/) to watch CPU, GPU,
-<p align="center">
-  <strong>Hardware monitoring system for Windows with Rainmeter overlay</strong>
+  <img src="HalfLifeMonitoring.png" alt="HalfLife Monitoring" width="400"/>
 </p>
 
-<p align="center">
-  <a href="README.pt-BR.md">Português</a>
+Minimal hardware monitoring Half-Life style overlay theme for [Rainmeter](https://www.rainmeter.net/) to watch CPU, GPU, and more.
+
   <a href="#features">Features</a>
   <a href="#installation">Installation</a>
   <a href="#usage">Usage</a>
@@ -112,6 +108,7 @@ WindowY=40
 - Try restarting TempBridge
 
 **Disk always 0 MB/s?**
+
 - Open Command Prompt as Administrator
 - Run: `lodctr /r`
 - Restart your computer
