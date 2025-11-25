@@ -22,10 +22,9 @@ set "OLD_VBS=%SCRIPT_DIR%TempBridge_Hidden.vbs"
 set "POWERSHELL_PATH=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
 set "DOCS_PATH=%USERPROFILE%\Documents"
 set "LOG_FILE=%SCRIPT_DIR%install.log"
-
-set "PS_CMD=%POWERSHELL_PATH% -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command \"$env:TEMPBRIDGE_DOCUMENTS='%DOCS_PATH%'; Start-Process -FilePath '%EXE_PATH%' -WorkingDirectory '%SCRIPT_DIR%' -WindowStyle Hidden\""
-set "RUN_KEY=HKCU\Software\Microsoft\Windows\CurrentVersion\Run"
-set "RUN_VALUE=TempBridgeMonitoring"
+set "TARGET_DIR=%ProgramData%\TempBridge"
+set "STARTER_PS=%TARGET_DIR%\start_tempbridge.ps1"
+set "START_CMD=%POWERSHELL_PATH% -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"%STARTER_PS%\""
 
 if not exist "%EXE_PATH%" (
     echo [ERROR] Could not find the executable at "%EXE_PATH%".
@@ -38,30 +37,54 @@ echo Cleaning old installs...
 if exist "%OLD_SHORTCUT%" del "%OLD_SHORTCUT%"
 if exist "%OLD_VBS%" del "%OLD_VBS%"
 if exist "%LOG_FILE%" del "%LOG_FILE%"
-
-echo Setting scheduled task to start with Windows (Admin)...
-echo.
-
-:: Remove previous task if it exists
 schtasks /Delete /TN "%TASK_NAME%" /F >nul 2>&1
 
-echo Configuring Run key entry to start hidden at logon...
-reg add "%RUN_KEY%" /v "%RUN_VALUE%" /t REG_SZ /d "%PS_CMD%" /f > "%LOG_FILE%" 2>&1
+echo Preparing service-like startup (SYSTEM, hidden)...
+if not exist "%TARGET_DIR%" mkdir "%TARGET_DIR%"
+copy /Y "%EXE_PATH%" "%TARGET_DIR%\TempBridge.exe" >nul
+
+echo [INFO] Writing starter script to %STARTER_PS%
+(
+    echo param(^)
+    echo $ErrorActionPreference = 'Stop'
+    echo $docs = '%DOCS_PATH%'
+    echo $exe = '%TARGET_DIR%\TempBridge.exe'
+    echo $log = '%TARGET_DIR%\service.log'
+    echo $wd = '%TARGET_DIR%'
+    echo function Log { param([string]$m^) $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'; Add-Content -LiteralPath $log -Value "[$ts] $m" }
+    echo try {
+    echo ^   if (-not (Test-Path -LiteralPath $exe^)) { Log "ERROR missing exe $exe"; exit 1 }
+    echo ^   Log "Start user=$env:USERNAME docs=$docs exe=$exe"
+    echo ^   $psi = New-Object System.Diagnostics.ProcessStartInfo
+    echo ^   $psi.FileName = $exe
+    echo ^   $psi.WorkingDirectory = $wd
+    echo ^   $psi.UseShellExecute = $false
+    echo ^   $psi.WindowStyle = 'Hidden'
+    echo ^   $psi.CreateNoWindow = $true
+    echo ^   $psi.Environment['TEMPBRIDGE_DOCUMENTS'] = $docs
+    echo ^   $p = [System.Diagnostics.Process]::Start($psi)
+    echo ^   if (-not $p^) { Log "ERROR failed to start process"; exit 1 }
+    echo ^   Log "Started TempBridge pid=$($p.Id)"
+    echo ^   exit 0
+    echo } catch {
+    echo ^   Log ("ERROR " + $_.Exception.Message)
+    echo ^   exit 1
+    echo }
+) > "%STARTER_PS%"
+
+echo Setting scheduled task to start with Windows (SYSTEM, hidden)...
+echo.
+schtasks /Create /TN "%TASK_NAME%" /TR "\"%START_CMD%\"" /SC ONLOGON /RL HIGHEST /DELAY 0000:05 /RU "SYSTEM" /F > "%LOG_FILE%" 2>&1
 if %errorLevel% neq 0 (
     type "%LOG_FILE%"
-    echo [ERROR] Failed to configure startup via registry.
+    echo [ERROR] Failed to create scheduled task.
     pause
     exit /b 1
 )
 
-echo [OK] Run key configured: %RUN_KEY%\%RUN_VALUE%
-echo Starting TempBridge now in the background...
-%PS_CMD%
-if %errorLevel% equ 0 (
-    echo [OK] TempBridge started (you can close this window).
-) else (
-    echo [WARN] Could not start TempBridge automatically. Rerun this installer as Admin and try again.
-)
+echo Running task once to verify launch...
+schtasks /Run /TN "%TASK_NAME%" >nul 2>&1
+timeout /t 3 >nul
 
 echo.
 echo ========================================
