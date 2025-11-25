@@ -50,8 +50,11 @@ echo [INFO] Creating helper runner for Task Scheduler...
 (
     echo @echo off
     echo set "TEMPBRIDGE_DOCUMENTS=%TARGET_DOCS%"
+    echo set "LOG_FILE=%%~dp0run_tempbridge.log"
     echo cd /d "%SCRIPT_DIR%"
-    echo "%EXE_PATH%"
+    echo echo [%%date%% %%time%%] start user=%%username%% profile=%%userprofile%% ^>^> "%%LOG_FILE%%"
+    echo "%EXE_PATH%" ^>^> "%%LOG_FILE%%" 2^>^&1
+    echo echo [%%date%% %%time%%] exit code %%errorlevel%% ^>^> "%%LOG_FILE%%"
 ) > "%TASK_RUNNER%"
 
 echo Setting scheduled task to start with Windows (Admin)...
@@ -60,9 +63,9 @@ echo.
 :: Remove previous task if it exists
 schtasks /Delete /TN "%TASK_NAME%" /F >nul 2>&1
 
-:: Create new task with highest privilege under SYSTEM, using helper runner to avoid quote issues
+:: Create new task under the logged user with highest privilege, using helper runner to avoid quote issues
 :: /DELAY 0000:05 adds a small delay to avoid race with user profile initialization (format mmmm:ss)
-schtasks /Create /TN "%TASK_NAME%" /TR "\"%TASK_RUNNER%\"" /SC ONLOGON /RL HIGHEST /DELAY 0000:05 /RU "SYSTEM" /F > "%LOG_FILE%" 2>&1
+schtasks /Create /TN "%TASK_NAME%" /TR "\"%TASK_RUNNER%\"" /SC ONLOGON /RL HIGHEST /DELAY 0000:05 /RU "%USERNAME%" /IT /F > "%LOG_FILE%" 2>&1
 if %errorLevel% neq 0 (
     type "%LOG_FILE%"
     echo [ERROR] Failed to create scheduled task. If prompted for a password, provide your Windows password.
