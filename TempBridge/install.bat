@@ -20,9 +20,10 @@ set "TASK_NAME=TempBridgeMonitoring"
 set "OLD_SHORTCUT=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\TempBridge.lnk"
 set "OLD_VBS=%SCRIPT_DIR%TempBridge_Hidden.vbs"
 set "POWERSHELL_PATH=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
+set "DOCS_PATH=%USERPROFILE%\Documents"
 set "LOG_FILE=%SCRIPT_DIR%install.log"
-set "RUNNER_PS=%SCRIPT_DIR%run_tempbridge.ps1"
-set "REGISTER_PS=%SCRIPT_DIR%register_tempbridge_task.ps1"
+
+set "PS_CMD=%POWERSHELL_PATH% -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command \"$env:TEMPBRIDGE_DOCUMENTS='%DOCS_PATH%'; Start-Process -FilePath '%EXE_PATH%' -WorkingDirectory '%SCRIPT_DIR%' -WindowStyle Hidden\""
 
 if not exist "%EXE_PATH%" (
     echo [ERROR] Could not find the executable at "%EXE_PATH%".
@@ -34,50 +35,7 @@ if not exist "%EXE_PATH%" (
 echo Cleaning old installs...
 if exist "%OLD_SHORTCUT%" del "%OLD_SHORTCUT%"
 if exist "%OLD_VBS%" del "%OLD_VBS%"
-if exist "%REGISTER_PS%" del "%REGISTER_PS%"
-if exist "%SCRIPT_DIR%run_tempbridge.log" del "%SCRIPT_DIR%run_tempbridge.log"
-
-echo [INFO] Creating run_tempbridge.ps1 helper...
-(
-    echo param(^)
-    echo $ErrorActionPreference = 'Stop'
-    echo $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-    echo $exePath = Join-Path $scriptDir 'TempBridge.exe'
-    echo $logPath = Join-Path $scriptDir 'run_tempbridge.log'
-    echo function Write-Log { param([string]$msg^) $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'; Add-Content -LiteralPath $logPath -Value "[$ts] $msg" }
-    echo try {
-    echo ^    if (-not (Test-Path -LiteralPath $exePath^)) { Write-Log "ERROR: TempBridge.exe not found at $exePath"; exit 1 }
-    echo ^    $docs = $env:TEMPBRIDGE_DOCUMENTS
-    echo ^    if ([string]::IsNullOrWhiteSpace($docs^)) { $docs = [Environment]::GetFolderPath('MyDocuments'^) }
-    echo ^    Write-Log "Start user=$env:USERNAME docs=$docs exe=$exePath"
-    echo ^    $psi = New-Object System.Diagnostics.ProcessStartInfo
-    echo ^    $psi.FileName = $exePath
-    echo ^    $psi.WorkingDirectory = $scriptDir
-    echo ^    $psi.UseShellExecute = $false
-    echo ^    $psi.WindowStyle = 'Hidden'
-    echo ^    $psi.CreateNoWindow = $true
-    echo ^    $psi.Environment['TEMPBRIDGE_DOCUMENTS'] = $docs
-    echo ^    if (-not [System.Diagnostics.Process]::Start($psi^)) { Write-Log "ERROR: Failed to start TempBridge process."; exit 1 }
-    echo ^    Write-Log "TempBridge launched."
-    echo ^    exit 0
-    echo } catch {
-    echo ^    Write-Log ("ERROR: " + $_.Exception.Message^)
-    echo ^    exit 1
-    echo }
-) > "%RUNNER_PS%"
-
-echo [INFO] Creating PowerShell task registration script...
-(
-    echo $ErrorActionPreference = 'Stop'
-    echo $taskName = '%TASK_NAME%'
-    echo $runner = '%RUNNER_PS%'
-    echo if (-not (Test-Path -LiteralPath $runner)) { throw "Runner not found: $runner" }
-    echo $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$runner`""
-    echo $trigger = New-ScheduledTaskTrigger -AtLogOn
-    echo Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -RunLevel Highest -User $env:USERNAME -Force ^| Out-Null
-    echo Start-ScheduledTask -TaskName $taskName ^| Out-Null
-    echo 'TASK_OK'
-) > "%REGISTER_PS%"
+if exist "%LOG_FILE%" del "%LOG_FILE%"
 
 echo Setting scheduled task to start with Windows (Admin)...
 echo.
@@ -85,8 +43,9 @@ echo.
 :: Remove previous task if it exists
 schtasks /Delete /TN "%TASK_NAME%" /F >nul 2>&1
 
-:: Register task via PowerShell to avoid cmd quoting issues
-"%POWERSHELL_PATH%" -NoProfile -ExecutionPolicy Bypass -File "%REGISTER_PS%" > "%LOG_FILE%" 2>&1
+:: Create new task under the logged user with highest privilege
+:: /DELAY 0000:05 adds a small delay to avoid race with user profile initialization (format mmmm:ss)
+schtasks /Create /TN "%TASK_NAME%" /TR "%PS_CMD%" /SC ONLOGON /RL HIGHEST /DELAY 0000:05 /RU "%USERNAME%" /F > "%LOG_FILE%" 2>&1
 if %errorLevel% neq 0 (
     type "%LOG_FILE%"
     echo [ERROR] Failed to create scheduled task. If prompted for a password, provide your Windows password.
@@ -95,16 +54,12 @@ if %errorLevel% neq 0 (
 )
 
 echo [OK] Scheduled task created to start with Windows.
-echo [INFO] Task details written to: %LOG_FILE%
-echo Waiting a few seconds for the task to run and create run_tempbridge.log (if any)...
-timeout /t 5 >nul
-
-if exist "%SCRIPT_DIR%run_tempbridge.log" (
-    echo [INFO] Found run log: %SCRIPT_DIR%run_tempbridge.log
-    echo Showing last lines:
-    "%POWERSHELL_PATH%" -NoProfile -Command "Get-Content -Path '%SCRIPT_DIR%run_tempbridge.log' -Tail 10"
+echo Starting TempBridge now in the background...
+%PS_CMD%
+if %errorLevel% equ 0 (
+    echo [OK] TempBridge started (you can close this window).
 ) else (
-    echo [WARN] run_tempbridge.log not found yet. It will be created when the task actually runs.
+    echo [WARN] Could not start TempBridge automatically. Rerun this installer as Admin and try again.
 )
 
 echo.
