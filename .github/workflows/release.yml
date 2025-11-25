@@ -55,7 +55,7 @@ jobs:
       run: |
         $version = "${{ github.ref_name }}".TrimStart('v')
         $packageName = "HalfLifeMonitoring_$version.rmskin"
-        Compress-Archive -Path staging/* -DestinationPath $packageName
+        Compress-Archive -Path staging/Skins/* -DestinationPath $packageName
         echo "PACKAGE_NAME=$packageName" >> $env:GITHUB_ENV
 
     - name: Create Release and Upload Assets
