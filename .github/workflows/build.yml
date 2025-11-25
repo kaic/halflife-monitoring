@@ -32,8 +32,8 @@ jobs:
       run: |
         dotnet publish TempBridge/TempBridge.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist/TempBridge
         # Copy the installer scripts into the output folder so they can be packaged/uploaded
-        copy "TempBridge\install.bat" "dist\TempBridge\install.bat"
-        copy "TempBridge\uninstall.bat" "dist\TempBridge\uninstall.bat"
+        Copy-Item "TempBridge\install.bat" -Destination "dist\TempBridge\"
+        Copy-Item "TempBridge\uninstall.bat" -Destination "dist\TempBridge\"
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
