@@ -16,7 +16,7 @@ if %errorLevel% neq 0 (
 
 set "SCRIPT_DIR=%~dp0"
 set "EXE_PATH=%SCRIPT_DIR%TempBridge.exe"
-set "TASK_NAME=TempBridgeMonitoring"
+set "SERVICE_NAME=TempBridgeSvc"
 set "OLD_SHORTCUT=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\TempBridge.lnk"
 set "OLD_VBS=%SCRIPT_DIR%TempBridge_Hidden.vbs"
 set "POWERSHELL_PATH=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
@@ -37,7 +37,8 @@ echo Cleaning old installs...
 if exist "%OLD_SHORTCUT%" del "%OLD_SHORTCUT%"
 if exist "%OLD_VBS%" del "%OLD_VBS%"
 if exist "%LOG_FILE%" del "%LOG_FILE%"
-schtasks /Delete /TN "%TASK_NAME%" /F >nul 2>&1
+sc stop "%SERVICE_NAME%" >nul 2>&1
+sc delete "%SERVICE_NAME%" >nul 2>&1
 
 echo Preparing service-like startup (SYSTEM, hidden)...
 if not exist "%TARGET_DIR%" mkdir "%TARGET_DIR%"
@@ -72,18 +73,18 @@ echo [INFO] Writing starter script to %STARTER_PS%
     echo }
 ) > "%STARTER_PS%"
 
-echo Setting scheduled task to start with Windows (SYSTEM, hidden)...
+echo Registering Windows service (LocalSystem, auto start)...
 echo.
-schtasks /Create /TN "%TASK_NAME%" /TR "\"%START_CMD%\"" /SC ONLOGON /RL HIGHEST /DELAY 0000:05 /RU "SYSTEM" /F > "%LOG_FILE%" 2>&1
+sc create "%SERVICE_NAME%" binPath= "\"%POWERSHELL_PATH%\" -NoProfile -ExecutionPolicy Bypass -File \"%STARTER_PS%\"" start= auto obj= LocalSystem DisplayName= "TempBridge Service" > "%LOG_FILE%" 2>&1
 if %errorLevel% neq 0 (
     type "%LOG_FILE%"
-    echo [ERROR] Failed to create scheduled task.
+    echo [ERROR] Failed to create service.
     pause
     exit /b 1
 )
 
-echo Running task once to verify launch...
-schtasks /Run /TN "%TASK_NAME%" >nul 2>&1
+echo Starting service to verify launch...
+sc start "%SERVICE_NAME%" >> "%LOG_FILE%" 2>&1
 timeout /t 3 >nul
 
 echo.
