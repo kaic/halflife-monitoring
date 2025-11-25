@@ -23,7 +23,7 @@ set "POWERSHELL_PATH=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe
 set "LOG_FILE=%SCRIPT_DIR%install.log"
 set "TARGET_DOCS=%USERPROFILE%\Documents"
 set "START_CMD=%POWERSHELL_PATH% -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command \"$env:TEMPBRIDGE_DOCUMENTS='%TARGET_DOCS%'; Start-Process -FilePath '%EXE_PATH%' -WorkingDirectory '%SCRIPT_DIR%' -WindowStyle Hidden\""
-set "TASK_CMD=%SystemRoot%\System32\cmd.exe /c \"set TEMPBRIDGE_DOCUMENTS=%TARGET_DOCS% && cd /d \"%SCRIPT_DIR%\" && \"%EXE_PATH%\"\""
+set "TASK_RUNNER=%SCRIPT_DIR%run_tempbridge.cmd"
 
 if not exist "%EXE_PATH%" (
     echo [ERROR] Could not find the executable at "%EXE_PATH%".
@@ -41,6 +41,18 @@ if exist "%OLD_VBS%" (
     echo [INFO] Removing old VBS helper...
     del "%OLD_VBS%"
 )
+if exist "%TASK_RUNNER%" (
+    echo [INFO] Removing old helper runner...
+    del "%TASK_RUNNER%"
+)
+
+echo [INFO] Creating helper runner for Task Scheduler...
+(
+    echo @echo off
+    echo set "TEMPBRIDGE_DOCUMENTS=%TARGET_DOCS%"
+    echo cd /d "%SCRIPT_DIR%"
+    echo "%EXE_PATH%"
+) > "%TASK_RUNNER%"
 
 echo Setting scheduled task to start with Windows (Admin)...
 echo.
@@ -48,10 +60,9 @@ echo.
 :: Remove previous task if it exists
 schtasks /Delete /TN "%TASK_NAME%" /F >nul 2>&1
 
-:: Create new task with highest privilege under SYSTEM, but force Documents path via env var
-:: Use single line to avoid caret/quote parsing issues on some locales
+:: Create new task with highest privilege under SYSTEM, using helper runner to avoid quote issues
 :: /DELAY 0000:05 adds a small delay to avoid race with user profile initialization (format mmmm:ss)
-schtasks /Create /TN "%TASK_NAME%" /TR "%TASK_CMD%" /SC ONLOGON /RL HIGHEST /DELAY 0000:05 /RU "SYSTEM" /F > "%LOG_FILE%" 2>&1
+schtasks /Create /TN "%TASK_NAME%" /TR "\"%TASK_RUNNER%\"" /SC ONLOGON /RL HIGHEST /DELAY 0000:05 /RU "SYSTEM" /F > "%LOG_FILE%" 2>&1
 if %errorLevel% neq 0 (
     type "%LOG_FILE%"
     echo [ERROR] Failed to create scheduled task. If prompted for a password, provide your Windows password.
