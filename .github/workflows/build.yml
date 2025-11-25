@@ -30,7 +30,7 @@ jobs:
 
     - name: Publish
       working-directory: ./TempBridge
-      run: dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ../dist/TempBridge
+      run: dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ../dist/TempBridge
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
