@@ -22,7 +22,9 @@ jobs:
 
     - name: Publish TempBridge
       run: |
-        dotnet publish TempBridge/TempBridge.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist/TempBridge
+        # Copy installer scripts into the output folder so they are available for release upload
+        Copy-Item "TempBridge\install.bat" -Destination "dist\TempBridge\" -Force
+        Copy-Item "TempBridge\uninstall.bat" -Destination "dist\TempBridge\" -Force
 
     - name: Prepare Skin Structure
       run: |
