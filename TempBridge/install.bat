@@ -1,14 +1,15 @@
 @echo off
+setlocal enabledelayedexpansion
 echo ========================================
-echo TempBridge - Instalador de Startup (Admin)
+echo TempBridge - Startup Installer (Admin)
 echo ========================================
 echo.
 
-:: Verifica Permissoes de Admin
+:: Check for admin permissions
 net session >nul 2>&1
 if %errorLevel% neq 0 (
-    echo [ERRO] Este script precisa ser executado como Administrador!
-    echo Clique com o botao direito e selecione "Executar como Administrador".
+    echo [ERROR] This script must be run as Administrator!
+    echo Right click and select "Run as Administrator".
     pause
     exit /b 1
 )
@@ -18,63 +19,64 @@ set "EXE_PATH=%SCRIPT_DIR%TempBridge.exe"
 set "TASK_NAME=TempBridgeMonitoring"
 set "OLD_SHORTCUT=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\TempBridge.lnk"
 set "OLD_VBS=%SCRIPT_DIR%TempBridge_Hidden.vbs"
+set "POWERSHELL_PATH=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
+set "LOG_FILE=%SCRIPT_DIR%install.log"
+set "TARGET_DOCS=%USERPROFILE%\Documents"
+set "START_CMD=%POWERSHELL_PATH% -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command \"$env:TEMPBRIDGE_DOCUMENTS='%TARGET_DOCS%'; Start-Process -FilePath '%EXE_PATH%' -WorkingDirectory '%SCRIPT_DIR%' -WindowStyle Hidden\""
+set "TASK_CMD=%SystemRoot%\System32\cmd.exe /c \"set TEMPBRIDGE_DOCUMENTS=%TARGET_DOCS% ^&^& cd /d \"%SCRIPT_DIR%\" ^&^& \"%EXE_PATH%\"\""
 
-echo Limpando instalacoes antigas...
-if exist "%OLD_SHORTCUT%" (
-    echo [INFO] Removendo atalho antigo do Startup...
-    del "%OLD_SHORTCUT%"
-)
-if exist "%OLD_VBS%" (
-    echo [INFO] Removendo script VBS antigo...
-    del "%OLD_VBS%"
-)
-
-echo Configurando tarefa agendada para iniciar com Windows (Admin)...
-echo.
-
-:: Remove tarefa anterior se existir
-schtasks /Delete /TN "%TASK_NAME%" /F >nul 2>&1
-
-:: Cria nova tarefa:
-:: /SC ONLOGON - Inicia ao logar
-:: /RL HIGHEST - Executa com privilegios maximos (Admin)
-:: /TR ... - Caminho do executavel
-schtasks /Create /TN "%TASK_NAME%" /TR "powershell -WindowStyle Hidden -Command \"Start-Process -FilePath '%EXE_PATH%'\"" /SC ONLOGON /RL HIGHEST /F
-if %errorLevel% equ 0 (
-    schtasks /Run /TN "%TASK_NAME%"
-    echo [OK] Tarefa agendada criada com sucesso!
-    echo Nome: %TASK_NAME%
-    echo.
-    echo TempBridge iniciara automaticamente com privilegios de Admin no proximo login.
-    echo.
-    echo Deseja iniciar agora? (S/N^)
-    choice /C SN /M "Iniciar TempBridge"
-    
-    if errorlevel 2 goto :end
-    if errorlevel 1 goto :start
-) else (
-    echo [ERRO] Falha ao criar tarefa agendada.
+if not exist "%EXE_PATH%" (
+    echo [ERROR] Could not find the executable at "%EXE_PATH%".
+    echo Build TempBridge first, then rerun this installer.
     pause
     exit /b 1
 )
 
-:start
-echo.
-echo Iniciando TempBridge...
-schtasks /Run /TN "%TASK_NAME%"
-timeout /t 2 >nul
-echo.
-echo TempBridge iniciado via Agendador de Tarefas.
-goto :end
+echo Cleaning old installs...
+if exist "%OLD_SHORTCUT%" (
+    echo [INFO] Removing old Startup shortcut...
+    del "%OLD_SHORTCUT%"
+)
+if exist "%OLD_VBS%" (
+    echo [INFO] Removing old VBS helper...
+    del "%OLD_VBS%"
+)
 
-:end
+echo Setting scheduled task to start with Windows (Admin)...
+echo.
+
+:: Remove previous task if it exists
+schtasks /Delete /TN "%TASK_NAME%" /F >nul 2>&1
+
+:: Create new task with highest privilege under SYSTEM, but force Documents path via env var
+:: /DELAY 0000:05 adds a small delay to avoid race with user profile initialization (format mmmm:ss)
+schtasks /Create ^
+    /TN "%TASK_NAME%" ^
+    /TR "%TASK_CMD%" ^
+    /SC ONLOGON ^
+    /RL HIGHEST ^
+    /DELAY 0000:05 ^
+    /RU "SYSTEM" ^
+    /F > "%LOG_FILE%" 2>&1
+if %errorLevel% neq 0 (
+    type "%LOG_FILE%"
+    echo [ERROR] Failed to create scheduled task. If prompted for a password, provide your Windows password.
+    pause
+    exit /b 1
+)
+
+echo [OK] Scheduled task created to start with Windows.
+echo Starting TempBridge now in the background...
+%START_CMD%
+if %errorLevel% equ 0 (
+    echo [OK] TempBridge started (you can close this window).
+) else (
+    echo [WARN] Could not start TempBridge automatically. Rerun this installer as Admin and try again.
+)
+
 echo.
 echo ========================================
-echo Instalacao concluida!
+echo Installation completed!
 echo ========================================
-echo.
-echo IMPORTANTE:
-echo - TempBridge roda em background com permissoes de Admin
-echo - Para parar: Task Manager ^> TempBridge.exe ^> End Task
 echo.
 pause

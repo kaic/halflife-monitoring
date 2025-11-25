@@ -29,8 +29,11 @@ internal static class Program
 
     private static async Task Run()
     {
-        // Caminho para o hwstats.txt no @Resources da skin
-        var documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        // Allow overriding Documents path (useful when running as SYSTEM via Task Scheduler)
+        var overrideDocs = Environment.GetEnvironmentVariable("TEMPBRIDGE_DOCUMENTS");
+        var documents = string.IsNullOrWhiteSpace(overrideDocs)
+            ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+            : overrideDocs;
         var hwStatsPath = Path.Combine(
             documents,
             "Rainmeter",
