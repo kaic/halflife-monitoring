@@ -199,4 +199,4 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ---
 
-<p align="center">Made by <a href="https://github.com/yourusername">Kaic</a></p>
+<p align="center">Made by <a href="http://kaic.me/">Kaic</a></p>
