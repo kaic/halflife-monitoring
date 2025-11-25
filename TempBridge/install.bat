@@ -1,5 +1,5 @@
 @echo off
-setlocal enabledelayedexpansion
+setlocal
 echo ========================================
 echo TempBridge - Startup Installer (Admin)
 echo ========================================
@@ -21,10 +21,8 @@ set "OLD_SHORTCUT=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\TempBr
 set "OLD_VBS=%SCRIPT_DIR%TempBridge_Hidden.vbs"
 set "POWERSHELL_PATH=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
 set "LOG_FILE=%SCRIPT_DIR%install.log"
-set "TARGET_DOCS=%USERPROFILE%\Documents"
-set "START_CMD=%POWERSHELL_PATH% -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command \"$env:TEMPBRIDGE_DOCUMENTS='%TARGET_DOCS%'; Start-Process -FilePath '%EXE_PATH%' -WorkingDirectory '%SCRIPT_DIR%' -WindowStyle Hidden\""
-set "TASK_RUNNER=%SCRIPT_DIR%run_tempbridge.cmd"
-set "TASK_CMD=%SystemRoot%\System32\cmd.exe /c"
+set "RUNNER_PS=%SCRIPT_DIR%run_tempbridge.ps1"
+set "REGISTER_PS=%SCRIPT_DIR%register_tempbridge_task.ps1"
 
 if not exist "%EXE_PATH%" (
     echo [ERROR] Could not find the executable at "%EXE_PATH%".
@@ -34,30 +32,30 @@ if not exist "%EXE_PATH%" (
 )
 
 echo Cleaning old installs...
-if exist "%OLD_SHORTCUT%" (
-    echo [INFO] Removing old Startup shortcut...
-    del "%OLD_SHORTCUT%"
-)
-if exist "%OLD_VBS%" (
-    echo [INFO] Removing old VBS helper...
-    del "%OLD_VBS%"
-)
-if exist "%TASK_RUNNER%" (
-    echo [INFO] Removing old helper runner...
-    del "%TASK_RUNNER%"
+if exist "%OLD_SHORTCUT%" del "%OLD_SHORTCUT%"
+if exist "%OLD_VBS%" del "%OLD_VBS%"
+if exist "%REGISTER_PS%" del "%REGISTER_PS%"
+if exist "%SCRIPT_DIR%run_tempbridge.log" del "%SCRIPT_DIR%run_tempbridge.log"
+
+if not exist "%RUNNER_PS%" (
+    echo [ERROR] Missing helper: %RUNNER_PS%
+    echo Make sure run_tempbridge.ps1 is present.
+    pause
+    exit /b 1
 )
 
-echo [INFO] Creating helper runner for Task Scheduler...
+echo [INFO] Creating PowerShell task registration script...
 (
-    echo @echo off
-    echo set "TEMPBRIDGE_DOCUMENTS=%TARGET_DOCS%"
-    echo set "LOG_FILE=%%~dp0run_tempbridge.log"
-    echo cd /d "%SCRIPT_DIR%"
-    echo echo [%%date%% %%time%%] start user=%%username%% profile=%%userprofile%% ^>^> "%%LOG_FILE%%"
-    echo "%EXE_PATH%" ^>^> "%%LOG_FILE%%" 2^>^&1
-    echo echo [%%date%% %%time%%] exit code %%errorlevel%% ^>^> "%%LOG_FILE%%"
-) > "%TASK_RUNNER%"
-for %%I in ("%TASK_RUNNER%") do set "TASK_RUNNER_FULL=%%~fI"
+    echo $ErrorActionPreference = 'Stop'
+    echo $taskName = '%TASK_NAME%'
+    echo $runner = '%RUNNER_PS%'
+    echo if (-not (Test-Path -LiteralPath $runner)) { throw "Runner not found: $runner" }
+    echo $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$runner`""
+    echo $trigger = New-ScheduledTaskTrigger -AtLogOn
+    echo Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -RunLevel Highest -User $env:USERNAME -Force ^| Out-Null
+    echo Start-ScheduledTask -TaskName $taskName ^| Out-Null
+    echo 'TASK_OK'
+) > "%REGISTER_PS%"
 
 echo Setting scheduled task to start with Windows (Admin)...
 echo.
@@ -65,9 +63,8 @@ echo.
 :: Remove previous task if it exists
 schtasks /Delete /TN "%TASK_NAME%" /F >nul 2>&1
 
-:: Create new task under the logged user with highest privilege, using helper runner to avoid quote issues
-:: /DELAY 0000:05 adds a small delay to avoid race with user profile initialization (format mmmm:ss)
-schtasks /Create /TN "%TASK_NAME%" /TR "\"%TASK_CMD% \"\"%TASK_RUNNER_FULL%\"\"\"" /SC ONLOGON /RL HIGHEST /DELAY 0000:05 /RU "%USERNAME%" /F > "%LOG_FILE%" 2>&1
+:: Register task via PowerShell to avoid cmd quoting issues
+"%POWERSHELL_PATH%" -NoProfile -ExecutionPolicy Bypass -File "%REGISTER_PS%" > "%LOG_FILE%" 2>&1
 if %errorLevel% neq 0 (
     type "%LOG_FILE%"
     echo [ERROR] Failed to create scheduled task. If prompted for a password, provide your Windows password.
@@ -77,21 +74,13 @@ if %errorLevel% neq 0 (
 
 echo [OK] Scheduled task created to start with Windows.
 echo [INFO] Task details written to: %LOG_FILE%
-
-echo Running scheduled task now for verification...
-schtasks /Run /TN "%TASK_NAME%" >> "%LOG_FILE%" 2>&1
-timeout /t 3 >nul
-
-if exist "%TASK_RUNNER%" (
-    echo [INFO] Helper exists: %TASK_RUNNER%
-) else (
-    echo [WARN] Helper missing: %TASK_RUNNER%
-)
+echo Waiting a few seconds for the task to run and create run_tempbridge.log (if any)...
+timeout /t 5 >nul
 
 if exist "%SCRIPT_DIR%run_tempbridge.log" (
     echo [INFO] Found run log: %SCRIPT_DIR%run_tempbridge.log
     echo Showing last lines:
-    powershell -NoProfile -Command "Get-Content -Path '%SCRIPT_DIR%run_tempbridge.log' -Tail 5"
+    "%POWERSHELL_PATH%" -NoProfile -Command "Get-Content -Path '%SCRIPT_DIR%run_tempbridge.log' -Tail 10"
 ) else (
     echo [WARN] run_tempbridge.log not found yet. It will be created when the task actually runs.
 )
