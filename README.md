@@ -8,6 +8,8 @@
   <img src="docs/overlay_2.png" alt="Overlay Example 2" width="360"/>
 </p>
 
+Need the Portuguese version? Read the [README em português](docs/README.pt-BR.md).
+
 Minimal hardware monitoring Half-Life style overlay theme for [Rainmeter](https://www.rainmeter.net/) to watch CPU, GPU, and more.
 
   <a href="#features">Features</a>
@@ -25,6 +27,8 @@ Minimal hardware monitoring Half-Life style overlay theme for [Rainmeter](https:
 - **RAM**: Usage in GB
 - **Disk**: Read/Write activity in MB/s
 - **Network**: Download/Upload in MB/s
+
+*About TempBridge:* TempBridge is a tiny .NET helper (~50 MB RAM at peak) that bridges LibreHardwareMonitor sensors to Rainmeter. Rainmeter cannot read GPU temperature/usage natively, so TempBridge runs in the background, writes a lightweight `hwstats.txt`, and stays invisible by starting as a Windows service.
 
 ### Key Benefits
 
@@ -48,10 +52,10 @@ Minimal hardware monitoring Half-Life style overlay theme for [Rainmeter](https:
 
 ### Quick Install (Recommended)
 
-1. **Download** the latest `.rmskin` file: [Releases Page](https://github.com/kaic/halflife-monitoring/releases)
-2. **Double-click** the file to install with Rainmeter
-3. **Follow** the installer prompts (TempBridge is installed as a hidden Windows service)
-4. **Done!** The overlay will appear in the top-right corner
+1. **Download** the latest `.rmskin` file *and* the `TempBridge.exe` + `install.bat` assets from the [Releases Page](https://github.com/kaic/halflife-monitoring/releases) (place the `.exe` and `.bat` in the same folder).
+2. **Double-click** the `.rmskin` to install the Rainmeter skin.
+3. **Open** an elevated Command Prompt, navigate to the TempBridge folder, and run `install.bat` (this installs the helper as a hidden Windows service so Rainmeter can read GPU sensors).
+4. **Done!** The overlay will appear in the top-right corner and TempBridge will auto-start at boot.
 
 ### Manual Install
 
@@ -65,9 +69,10 @@ Minimal hardware monitoring Half-Life style overlay theme for [Rainmeter](https:
 
 #### 2. Install TempBridge (hidden service)
 
+- Copy `TempBridge.exe` and `install.bat` from the release assets to the same folder
 - Open **Command Prompt as Administrator**
-- Run `TempBridge\install.bat`
-- The script copies `TempBridge.exe` to `%ProgramData%\TempBridge`, registers a Windows Service (LocalSystem, auto-start), and launches it hidden automatically
+- Run `install.bat`
+- The installer copies TempBridge to `%ProgramData%\TempBridge`, registers a LocalSystem service (auto-start), and launches it hidden automatically so Rainmeter always has fresh sensor data
 - During install we automatically run `Unblock-File` so SmartScreen should not prompt; if your AV flags it, allow it once
 - Use `TempBridge\uninstall.bat` (Admin) if you want to remove the auto-start entry later
 

@@ -21,6 +21,8 @@ Minimal hardware monitoring Half-Life style overlay theme for [Rainmeter](https:
 - **CPU**: Usage % + Temperature °C
 - **GPU**: Usage % + Temperature °C *(NVIDIA/AMD/Intel)*
 - *(FPS temporariamente desativado enquanto buscamos uma fonte confiável)*
+
+*Sobre o TempBridge:* O TempBridge é um helper .NET minúsculo (consome ~50 MB de RAM) que consulta os sensores do LibreHardwareMonitor e escreve `hwstats.txt`. O Rainmeter não enxerga temperatura/uso de GPU nativamente, então o TempBridge preenche essa lacuna e mantém a skin atualizada em segundo plano como um serviço oculto.
 - **RAM**: Usage in GB
 - **Disk**: Read/Write activity in MB/s
 - **Network**: Download/Upload in MB/s
@@ -47,10 +49,10 @@ Minimal hardware monitoring Half-Life style overlay theme for [Rainmeter](https:
 
 ### Quick Install (Recommended)
 
-1. **Download** the latest `.rmskin` file: [Releases Page](https://github.com/kaic/halflife-monitoring/releases)
-2. **Double-click** the file to install with Rainmeter
-3. **Follow** the installer prompts (TempBridge será instalado como um serviço oculto do Windows)
-4. **Done!** The overlay will appear in the top-right corner
+1. **Baixe** o `.rmskin` e os arquivos `TempBridge.exe` + `install.bat` da [página de releases](https://github.com/kaic/halflife-monitoring/releases) (deixe o `.exe` e o `.bat` na mesma pasta).
+2. **Execute** o `.rmskin` para instalar a skin no Rainmeter.
+3. **Abra** um Prompt de Comando como Administrador, navegue até a pasta do TempBridge e rode `install.bat` (ele instala o helper como serviço escondido do Windows).
+4. **Pronto!** O overlay aparece no canto superior direito e o TempBridge inicializa automaticamente a cada boot.
 
 ### Manual Install
 
@@ -64,10 +66,11 @@ Minimal hardware monitoring Half-Life style overlay theme for [Rainmeter](https:
 
 #### 2. Instalar o TempBridge (serviço oculto)
 
+- Copie `TempBridge.exe` e `install.bat` (Assets do release) para a mesma pasta
 - Abra um **Prompt de Comando como Administrador**
-- Execute `TempBridge\install.bat`
-- O script copia o `TempBridge.exe` para `%ProgramData%\TempBridge`, registra um serviço do Windows (LocalSystem, inicialização automática) e garante que ele rode oculto
-- Durante a instalacao rodamos `Unblock-File` para remover o SmartScreen; se o antivirus sinalizar, permita/ignore uma vez
+- Execute `install.bat`
+- O script copia o helper para `%ProgramData%\TempBridge`, registra um serviço (LocalSystem, auto start) e o inicia oculto — isso garante que o Rainmeter tenha os sensores da GPU disponíveis sempre
+- Durante a instalação rodamos `Unblock-File` para remover o SmartScreen; se o antivirus sinalizar, permita/ignore uma vez
 - Se quiser remover depois, execute `TempBridge\uninstall.bat` (Administrador)
 
 #### 3. Load the Skin
