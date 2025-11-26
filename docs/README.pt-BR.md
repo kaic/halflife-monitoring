@@ -1,7 +1,11 @@
 # HalfLife Monitoring Theme for Rainmeter
 
 <p align="center">
-  <img src="HalfLifeMonitoring.png" alt="HalfLife Monitoring" width="400"/>
+  <img src="desktop.png" alt="HalfLife Monitoring" width="420"/>
+</p>
+<p align="center">
+  <img src="overlay.png" alt="Overlay Exemplo 1" width="360"/>
+  <img src="overlay_2.png" alt="Overlay Exemplo 2" width="360"/>
 </p>
 
 Minimal hardware monitoring Half-Life style overlay theme for [Rainmeter](https://www.rainmeter.net/) to watch CPU, GPU, and more.
@@ -45,7 +49,7 @@ Minimal hardware monitoring Half-Life style overlay theme for [Rainmeter](https:
 
 1. **Download** the latest `.rmskin` file: [Releases Page](https://github.com/kaic/halflife-monitoring/releases)
 2. **Double-click** the file to install with Rainmeter
-3. **Follow** the installer prompts (it will set up TempBridge automatically)
+3. **Follow** the installer prompts (TempBridge será instalado como um serviço oculto do Windows)
 4. **Done!** The overlay will appear in the top-right corner
 
 ### Manual Install
@@ -58,7 +62,7 @@ Minimal hardware monitoring Half-Life style overlay theme for [Rainmeter](https:
 - Double-click `HalfLifeMonitoring.rmskin`
 - Follow the Rainmeter installer prompts
 
-#### 2. Instalar o TempBridge (processo oculto)
+#### 2. Instalar o TempBridge (serviço oculto)
 
 - Abra um **Prompt de Comando como Administrador**
 - Execute `TempBridge\install.bat`
