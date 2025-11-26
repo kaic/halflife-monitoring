@@ -17,10 +17,10 @@ if %errorLevel% neq 0 (
 
 set "SCRIPT_DIR=%~dp0"
 set "EXE_SOURCE=%SCRIPT_DIR%TempBridge.exe"
-set "TARGET_DIR=%ProgramData%\TempBridge"
+set "TARGET_DIR=%LocalAppData%\TempBridge"
 set "RUNNER_PS=%TARGET_DIR%\start_tempbridge.ps1"
 set "POWERSHELL_PATH=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
-set "RUN_KEY=TempBridge"
+set "TASK_NAME=TempBridgeMonitoring"
 set "LOG_FILE=%TARGET_DIR%\launcher.log"
 
 if not exist "%EXE_SOURCE%" (
@@ -60,10 +60,6 @@ echo [INFO] Ensuring antivirus trusts TempBridge (Microsoft Defender)...
 
 set "DOCS_PATH=%USERPROFILE%\Documents"
 
-if not exist "%DOCS_PATH%" (
-    echo [WARN] Documents folder not found for %USERPROFILE%. Using default.
-)
-
 echo Writing launcher script to %RUNNER_PS% ...
 (
     echo $ErrorActionPreference = 'Stop'
@@ -98,35 +94,7 @@ if %errorLevel% neq 0 (
     exit /b 1
 )
 
-echo Registering Run key for auto-start...
-reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\Run" /v "%RUN_KEY%" /t REG_SZ /d "\"%POWERSHELL_PATH%\" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"%RUNNER_PS%\"" /f >nul
-if %errorLevel% neq 0 (
-    echo [WARN] Failed to register the Run key. Falling back to scheduled task.
-    goto FALLBACK_TASK
-)
-
-echo Launching TempBridge now to validate...
-"%POWERSHELL_PATH%" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "%RUNNER_PS%" >nul 2>&1
-if %errorLevel% neq 0 (
-    echo [WARN] TempBridge did not start automatically. Check the log:
-    if exist "%LOG_FILE%" type "%LOG_FILE%"
-) else (
-    echo [OK] TempBridge started in the background. Log file:
-    echo   %LOG_FILE%
-)
-
-echo.
-echo ========================================
-echo Installation completed via Run key!
-echo ========================================
-echo.
-echo [INFO] Press ENTER to exit or check the log at:
-echo   %LOG_FILE%
-pause
-goto END
-
-:FALLBACK_TASK
-echo Registering scheduled task (current user)...
+echo Registering scheduled task (current user, highest privileges)...
 set "TASK_LOG=%TARGET_DIR%\task.log"
 schtasks /Create /TN "%TASK_NAME%" /TR "\"%POWERSHELL_PATH%\" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"%RUNNER_PS%\"" /SC ONLOGON /RL HIGHEST /IT /F > "%TASK_LOG%" 2>&1
 if %errorLevel% neq 0 (
@@ -147,11 +115,9 @@ if %errorLevel% neq 0 (
 
 echo.
 echo ========================================
-echo Installation completed via Scheduled Task!
+echo Installation completed!
 echo ========================================
 echo.
 if exist "%TASK_LOG%" type "%TASK_LOG%"
 echo.
 pause
-
-:END
