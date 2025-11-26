@@ -14,6 +14,9 @@ internal static class Program
     private static readonly string LogPath = Path.Combine(BaseDirectory, "tempbridge.log");
     private static readonly object LogSync = new();
     private static bool _cpuDebugShown = false;
+    private static bool _gpuDebugShown = false;
+    private static readonly Queue<DateTime> _frameTimestamps = new();
+    private static readonly TimeSpan _fpsWindow = TimeSpan.FromSeconds(1);
 
     public static async Task Main()
     {
@@ -138,7 +141,7 @@ internal static class Program
         }
     }
 
-    private static (float? CpuTemp, float? GpuTemp, float? CpuUsage, float? GpuUsage, float? DiskRead, float? DiskWrite)
+    private static (float? CpuTemp, float? GpuTemp, float? CpuUsage, float? GpuUsage, float? DiskRead, float? DiskWrite, float? Fps)
         ReadSensors(Computer computer, bool includeStorageSensors)
     {
         float? cpuTemp = null;
@@ -147,6 +150,7 @@ internal static class Program
         float? gpuUsage = null;
         float? diskRead = null;
         float? diskWrite = null;
+        float? fps = CalculateFps();
 
         foreach (var hardware in computer.Hardware)
         {
@@ -183,7 +187,7 @@ internal static class Program
             }
         }
 
-        return (cpuTemp, gpuTemp, cpuUsage, gpuUsage, diskRead, diskWrite);
+        return (cpuTemp, gpuTemp, cpuUsage, gpuUsage, diskRead, diskWrite, fps);
     }
 
     private static bool ShouldProcessHardware(HardwareType type, bool includeStorageSensors) => type switch
@@ -308,6 +312,12 @@ internal static class Program
         float loadSum = 0f;
         int loadCount = 0;
 
+        if (!_gpuDebugShown && existingTemp is null && existingUsage is null)
+        {
+            LogInfo($"GPU Hardware: {gpu.Name}");
+            LogInfo($"Total GPU sensors: {gpu.Sensors.Length}");
+        }
+
         foreach (var sensor in gpu.Sensors)
         {
             if (sensor.Value is null) continue;
@@ -315,8 +325,18 @@ internal static class Program
             switch (sensor.SensorType)
             {
                 case SensorType.Temperature:
-                    if (sensor.Name.Contains("Core", StringComparison.OrdinalIgnoreCase) ||
-                        sensor.Name.Contains("GPU", StringComparison.OrdinalIgnoreCase))
+                    if (!_gpuDebugShown)
+                    {
+                        LogInfo($"GPU Temp Sensor: {sensor.Name} = {sensor.Value:F1}°C");
+                    }
+
+                    // Priority: GPU Core temp (the actual die temperature)
+                    if (sensor.Name.Contains("GPU Core", StringComparison.OrdinalIgnoreCase))
+                    {
+                        temp = sensor.Value;
+                    }
+                    else if (temp is null && (sensor.Name.Contains("Core", StringComparison.OrdinalIgnoreCase) ||
+                        sensor.Name.Contains("GPU", StringComparison.OrdinalIgnoreCase)))
                     {
                         temp = sensor.Value;
                     }
@@ -328,9 +348,22 @@ internal static class Program
                     break;
 
                 case SensorType.Load:
-                    if (sensor.Name.Contains("Core", StringComparison.OrdinalIgnoreCase) ||
-                        sensor.Name.Contains("GPU", StringComparison.OrdinalIgnoreCase) ||
-                        sensor.Name.Contains("D3D", StringComparison.OrdinalIgnoreCase))
+                    if (!_gpuDebugShown)
+                    {
+                        LogInfo($"GPU Load Sensor: {sensor.Name} = {sensor.Value:F1}%");
+                    }
+
+                    // Priority order: D3D 3D (actual 3D load) > GPU Core > generic GPU
+                    if (sensor.Name.Contains("D3D 3D", StringComparison.OrdinalIgnoreCase))
+                    {
+                        usage = sensor.Value;
+                    }
+                    else if (usage is null && sensor.Name.Contains("GPU Core", StringComparison.OrdinalIgnoreCase))
+                    {
+                        usage = sensor.Value;
+                    }
+                    else if (usage is null && (sensor.Name.Contains("Core", StringComparison.OrdinalIgnoreCase) ||
+                        sensor.Name.Contains("GPU", StringComparison.OrdinalIgnoreCase)))
                     {
                         usage = sensor.Value;
                     }
@@ -340,8 +373,13 @@ internal static class Program
                         loadCount++;
                     }
                     break;
-
             }
+        }
+
+        if (!_gpuDebugShown)
+        {
+            LogInfo($"GPU Final: Temp={temp:F1}°C, Usage={usage:F1}%");
+            _gpuDebugShown = true;
         }
 
         if (temp is null && tempCount > 0)
@@ -402,7 +440,7 @@ internal static class Program
     }
 
     private static void WriteHwStats(string path,
-        (float? CpuTemp, float? GpuTemp, float? CpuUsage, float? GpuUsage, float? DiskRead, float? DiskWrite) r)
+        (float? CpuTemp, float? GpuTemp, float? CpuUsage, float? GpuUsage, float? DiskRead, float? DiskWrite, float? Fps) r)
     {
         float cpuTemp = r.CpuTemp ?? 0;
         float gpuTemp = r.GpuTemp ?? 0;
@@ -410,6 +448,7 @@ internal static class Program
         float gpuUsage = r.GpuUsage ?? 0;
         float diskRead = r.DiskRead ?? 0;
         float diskWrite = r.DiskWrite ?? 0;
+        float fps = r.Fps ?? 0;
 
         var sb = new StringBuilder(128);
         sb.AppendLine("CpuTemp=" + cpuTemp.ToString("F1", CultureInfo.InvariantCulture));
@@ -418,8 +457,26 @@ internal static class Program
         sb.AppendLine("GpuUsage=" + gpuUsage.ToString("F1", CultureInfo.InvariantCulture));
         sb.AppendLine("DiskRead=" + diskRead.ToString("F1", CultureInfo.InvariantCulture));
         sb.AppendLine("DiskWrite=" + diskWrite.ToString("F1", CultureInfo.InvariantCulture));
+        sb.AppendLine("Fps=" + fps.ToString("F0", CultureInfo.InvariantCulture));
 
         File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
+    }
+
+    private static float? CalculateFps()
+    {
+        var now = DateTime.UtcNow;
+        
+        // Register this frame
+        _frameTimestamps.Enqueue(now);
+        
+        // Remove old frames outside the 1-second window
+        while (_frameTimestamps.Count > 0 && (now - _frameTimestamps.Peek()) > _fpsWindow)
+        {
+            _frameTimestamps.Dequeue();
+        }
+        
+        // FPS = number of frames in the last second
+        return _frameTimestamps.Count;
     }
 
     private static void LogInfo(string message) => Log("INFO", message);
