@@ -24,6 +24,7 @@ set "STARTER_PS=%TARGET_DIR%\start_tempbridge.ps1"
 set "LOG_FILE=%TARGET_DIR%\install.log"
 set "RUN_KEY=TempBridge"
 set "TASK_NAME=TempBridgeMonitoring"
+set "SERVICE_NAME=TempBridgeSvc"
 
 if not exist "%EXE_SOURCE%" (
     echo [ERROR] Could not find TempBridge.exe at:
@@ -36,8 +37,8 @@ if not exist "%EXE_SOURCE%" (
 echo Cleaning previous installs...
 reg delete "HKLM\Software\Microsoft\Windows\CurrentVersion\Run" /v "%RUN_KEY%" /f >nul 2>&1
 schtasks /Delete /TN "%TASK_NAME%" /F >nul 2>&1
-sc stop "%TASK_NAME%" >nul 2>&1
-sc delete "%TASK_NAME%" >nul 2>&1
+sc stop "%SERVICE_NAME%" >nul 2>&1
+sc delete "%SERVICE_NAME%" >nul 2>&1
 if exist "%TARGET_DIR%" rd /S /Q "%TARGET_DIR%" >nul 2>&1
 mkdir "%TARGET_DIR%"
 
@@ -95,8 +96,8 @@ if %errorLevel% neq 0 (
     exit /b 1
 )
 
-echo Registering scheduled task (current user, highest privileges)...
-schtasks /Create /TN "%TASK_NAME%" /TR "\"%POWERSHELL_PATH%\" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"%STARTER_PS%\"" /SC ONLOGON /RL HIGHEST /F > "%LOG_FILE%" 2>&1
+echo Registering scheduled task (SYSTEM, highest privileges)...
+schtasks /Create /TN "%TASK_NAME%" /TR "\"%POWERSHELL_PATH%\" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"%STARTER_PS%\"" /SC ONSTART /RU "SYSTEM" /RL HIGHEST /F > "%LOG_FILE%" 2>&1
 if %errorLevel% neq 0 (
     type "%LOG_FILE%"
     echo [ERROR] Failed to create scheduled task. See log above.
