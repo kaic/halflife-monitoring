@@ -8,7 +8,7 @@ namespace TempBridge;
 
 internal static class Program
 {
-    private static readonly TimeSpan LoopDelay = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan LoopDelay = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan StatusLogInterval = TimeSpan.FromSeconds(10);
     private static readonly string BaseDirectory = AppContext.BaseDirectory;
     private static readonly string LogPath = Path.Combine(BaseDirectory, "tempbridge.log");
