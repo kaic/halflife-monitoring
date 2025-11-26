@@ -22,8 +22,7 @@ Minimal hardware monitoring Half-Life style overlay theme for [Rainmeter](https:
 ## Features
 
 - **CPU**: Usage %
-- **GPU**: Usage % + Temperature °C *(NVIDIA/AMD/Intel)*
-- *(FPS temporarily disabled while we look for a reliable source)*
+- **GPU**: Usage % + Temperature °C + FPS *(NVIDIA/AMD/Intel)*
 - **RAM**: Usage in GB
 - **Disk**: Read/Write activity in MB/s
 - **Network**: Download/Upload in MB/s
