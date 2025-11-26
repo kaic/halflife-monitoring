@@ -35,7 +35,11 @@ reg delete "HKLM\Software\Microsoft\Windows\CurrentVersion\Run" /v "%RUN_KEY%" /
 schtasks /Delete /TN TempBridgeMonitoring /F >nul 2>&1
 sc stop TempBridgeSvc >nul 2>&1
 sc delete TempBridgeSvc >nul 2>&1
-if exist "%TARGET_DIR%" rd /S /Q "%TARGET_DIR%" >nul 2>&1
+if exist "%TARGET_DIR%" (
+    takeown /F "%TARGET_DIR%" /R /D Y >nul 2>&1
+    icacls "%TARGET_DIR%" /grant *S-1-5-32-544:F /T >nul 2>&1
+    rd /S /Q "%TARGET_DIR%" >nul 2>&1
+)
 mkdir "%TARGET_DIR%"
 
 echo Copying TempBridge to %TARGET_DIR% ...
@@ -93,9 +97,8 @@ if %errorLevel% neq 0 (
 echo Registering Run key for auto-start...
 reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\Run" /v "%RUN_KEY%" /t REG_SZ /d "\"%POWERSHELL_PATH%\" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"%RUNNER_PS%\"" /f >nul
 if %errorLevel% neq 0 (
-    echo [ERROR] Failed to register the Run key (TempBridge will not auto-start).
-    pause
-    exit /b 1
+    echo [WARN] Failed to register the Run key. Falling back to scheduled task.
+    goto FALLBACK_TASK
 )
 
 echo Launching TempBridge now to validate...
@@ -114,3 +117,33 @@ echo Installation completed!
 echo ========================================
 echo.
 pause
+goto END
+
+:FALLBACK_TASK
+echo Registering scheduled task (current user)...
+set "TASK_LOG=%TARGET_DIR%\task.log"
+schtasks /Create /TN "%TASK_NAME%" /TR "\"%POWERSHELL_PATH%\" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"%RUNNER_PS%\"" /SC ONLOGON /RL HIGHEST /IT /F > "%TASK_LOG%" 2>&1
+if %errorLevel% neq 0 (
+    type "%TASK_LOG%"
+    echo [ERROR] Failed to create scheduled task. See log above.
+    pause
+    exit /b 1
+)
+
+echo Triggering the task now to validate launch...
+schtasks /Run /TN "%TASK_NAME%" >> "%TASK_LOG%" 2>&1
+if %errorLevel% neq 0 (
+    type "%TASK_LOG%"
+    echo [WARN] Scheduled task did not start. Check the log above.
+) else (
+    echo [OK] TempBridge started in the background via Task Scheduler.
+)
+
+echo.
+echo ========================================
+echo Installation completed!
+echo ========================================
+echo.
+pause
+
+:END
