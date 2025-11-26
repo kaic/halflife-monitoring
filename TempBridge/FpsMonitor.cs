@@ -31,16 +31,15 @@ internal sealed class FpsMonitor : IDisposable
     {
         try
         {
-            if (TraceEventSession.IsElevated() == false)
-            {
-                logWarn("FPS monitor requires elevated privileges; skipping.");
-                return null;
-            }
-
             var monitor = new FpsMonitor(logInfo, logWarn);
             monitor.Start();
             logInfo("FPS monitor initialized (DXGKrnl ETW).");
             return monitor;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            logWarn($"FPS monitor not authorized (run TempBridge with elevated privileges): {ex.Message}");
+            return null;
         }
         catch (Exception ex)
         {

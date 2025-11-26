@@ -61,7 +61,7 @@ Minimal hardware monitoring Half-Life style overlay theme for [Rainmeter](https:
 
 - Abra um **Prompt de Comando como Administrador**
 - Execute `TempBridge\install.bat`
-- O script copia o `TempBridge.exe` para `%ProgramData%\TempBridge`, cria uma tarefa no Agendador (executada como **SYSTEM**, com maiores privilégios) e garante que ele inicie oculto de forma automática
+- O script copia o `TempBridge.exe` para `%ProgramData%\TempBridge`, registra um serviço do Windows (LocalSystem, inicialização automática) e garante que ele rode oculto
 - Durante a instalacao rodamos `Unblock-File` para remover o SmartScreen; se o antivirus sinalizar, permita/ignore uma vez
 - Se quiser remover depois, execute `TempBridge\uninstall.bat` (Administrador)
 
