@@ -15,8 +15,7 @@ internal static class Program
     private static readonly object LogSync = new();
     private static bool _cpuDebugShown = false;
     private static bool _gpuDebugShown = false;
-    private static readonly Queue<DateTime> _frameTimestamps = new();
-    private static readonly TimeSpan _fpsWindow = TimeSpan.FromSeconds(1);
+    private static FpsMonitor? _fpsMonitor = null;
 
     public static async Task Main()
     {
@@ -70,6 +69,19 @@ internal static class Program
             LogWarn($"Unable to initialize disk performance counters: {ex.Message}. Using LibreHardwareMonitor for disk throughput.");
         }
 
+        // Initialize FPS monitor (ETW-based)
+        try
+        {
+            _fpsMonitor = new FpsMonitor();
+            _fpsMonitor.Start();
+            LogInfo("FPS Monitor started (ETW-based frame capture)");
+        }
+        catch (Exception ex)
+        {
+            LogWarn($"FPS Monitor failed to start: {ex.Message}. FPS will not be available.");
+            _fpsMonitor = null;
+        }
+
         var computer = new Computer
         {
             IsCpuEnabled = true,
@@ -118,10 +130,11 @@ internal static class Program
 
                     if (DateTime.UtcNow >= nextStatusLog)
                     {
+                        var fpsText = readings.Fps.HasValue ? $" | FPS:{readings.Fps:F0}" : "";
                         LogInfo(
                             $"CPU {readings.CpuUsage:F1}% ({readings.CpuTemp:F1}°C) | " +
                             $"GPU {readings.GpuUsage:F1}% ({readings.GpuTemp:F1}°C) | " +
-                            $"Disk R:{readings.DiskRead:F1} W:{readings.DiskWrite:F1} MB/s");
+                            $"Disk R:{readings.DiskRead:F1} W:{readings.DiskWrite:F1} MB/s{fpsText}");
                         nextStatusLog = DateTime.UtcNow + StatusLogInterval;
                     }
                 }
@@ -135,6 +148,7 @@ internal static class Program
         }
         finally
         {
+            _fpsMonitor?.Dispose();
             computer.Close();
             diskReadCounter?.Dispose();
             diskWriteCounter?.Dispose();
@@ -150,7 +164,7 @@ internal static class Program
         float? gpuUsage = null;
         float? diskRead = null;
         float? diskWrite = null;
-        float? fps = CalculateFps();
+        float? fps = _fpsMonitor?.GetFps();
 
         foreach (var hardware in computer.Hardware)
         {
@@ -460,23 +474,6 @@ internal static class Program
         sb.AppendLine("Fps=" + fps.ToString("F0", CultureInfo.InvariantCulture));
 
         File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
-    }
-
-    private static float? CalculateFps()
-    {
-        var now = DateTime.UtcNow;
-        
-        // Register this frame
-        _frameTimestamps.Enqueue(now);
-        
-        // Remove old frames outside the 1-second window
-        while (_frameTimestamps.Count > 0 && (now - _frameTimestamps.Peek()) > _fpsWindow)
-        {
-            _frameTimestamps.Dequeue();
-        }
-        
-        // FPS = number of frames in the last second
-        return _frameTimestamps.Count;
     }
 
     private static void LogInfo(string message) => Log("INFO", message);
