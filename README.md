@@ -131,6 +131,13 @@ WindowY=40
 - Refresh Rainmeter (right-click → Refresh All)
 - Check Rainmeter logs for errors
 
+**Antivirus blocking TempBridge?**
+
+- Your antivirus may flag TempBridge as a false positive due to its low-level hardware access
+- The installer automatically detects and configures exclusions for 10+ antivirus products
+- If detection fails, see **[Antivirus Fix Guide](docs/ANTIVIRUS_FIX.md)** for manual instructions
+- Supported antivirus: Windows Defender, Bitdefender, Avast, AVG, Norton, McAfee, Kaspersky, ESET, Avira, Trend Micro, Malwarebytes, Sophos
+
 ---
 
 ## Building from Source

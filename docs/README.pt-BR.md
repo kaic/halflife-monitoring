@@ -125,6 +125,13 @@ WindowY=40
 - Refresh Rainmeter (right-click → Refresh All)
 - Check Rainmeter logs for errors
 
+**Antivírus bloqueando o TempBridge?**
+
+- Seu antivírus pode detectar o TempBridge como falso positivo devido ao acesso de baixo nível ao hardware
+- O instalador detecta e configura automaticamente exclusões para mais de 10 produtos antivírus
+- Se a detecção automática falhar, consulte o **[Guia de Correção de Antivírus](ANTIVIRUS_FIX.md)** para instruções manuais
+- Antivírus suportados: Windows Defender, Bitdefender, Avast, AVG, Norton, McAfee, Kaspersky, ESET, Avira, Trend Micro, Malwarebytes, Sophos
+
 ---
 
 ## Building from Source

@@ -54,9 +54,87 @@ echo Removing downloaded-file mark (SmartScreen)...
 "%POWERSHELL_PATH%" -NoProfile -ExecutionPolicy Bypass -Command "try { Unblock-File -LiteralPath '%EXE_SOURCE%' -ErrorAction Stop } catch { }"
 "%POWERSHELL_PATH%" -NoProfile -ExecutionPolicy Bypass -Command "try { Unblock-File -LiteralPath '%TARGET_DIR%\TempBridge.exe' -ErrorAction Stop } catch { exit 2 }"
 
-echo [INFO] Ensuring antivirus trusts TempBridge (Microsoft Defender)...
+echo [INFO] Adding TempBridge exclusions to all detected antivirus products...
+echo.
+
+:: Call PowerShell script to handle all antivirus exclusions
 "%POWERSHELL_PATH%" -NoProfile -ExecutionPolicy Bypass -Command ^
-  "if (Get-Command Add-MpPreference -ErrorAction SilentlyContinue) { try { Add-MpPreference -ExclusionPath '%TARGET_DIR%' -ErrorAction Stop; } catch {} }"
+  "$targetExe = '%TARGET_DIR%\\TempBridge.exe'; $targetDir = '%TARGET_DIR%'; " ^
+  "$avFound = 0; " ^
+  "Write-Host ''; " ^
+  "Write-Host '=== Scanning for Antivirus Products ==='; " ^
+  "Write-Host ''; " ^
+  "if (Get-Command Add-MpPreference -ErrorAction SilentlyContinue) { " ^
+  "  Write-Host '[1/11] Windows Defender:' -NoNewline; " ^
+  "  try { Add-MpPreference -ExclusionPath $targetDir -ErrorAction Stop; Write-Host ' ADDED' -ForegroundColor Green; $avFound++ } " ^
+  "  catch { Write-Host ' FAILED (may need manual configuration)' -ForegroundColor Yellow } " ^
+  "} else { Write-Host '[1/11] Windows Defender: NOT DETECTED' } " ^
+  "Write-Host '[2/11] Bitdefender:' -NoNewline; " ^
+  "$bd = Get-Process bdagent,bdservicehost -ErrorAction SilentlyContinue | Select -First 1; " ^
+  "if ($bd) { " ^
+  "  $regPath = 'HKLM:\\SOFTWARE\\Bitdefender\\Bitdefender Agent'; " ^
+  "  if (Test-Path $regPath) { " ^
+  "    try { New-ItemProperty -Path $regPath -Name \"TempBridgeExclusion\" -Value $targetExe -PropertyType String -Force -ErrorAction Stop | Out-Null; Write-Host ' ADDED (Registry)' -ForegroundColor Green; $avFound++ } " ^
+  "    catch { Write-Host ' DETECTED (add manually via GUI)' -ForegroundColor Yellow; $avFound++ } " ^
+  "  } else { Write-Host ' DETECTED (add manually via GUI)' -ForegroundColor Yellow; $avFound++ } " ^
+  "} else { Write-Host ' NOT DETECTED' } " ^
+  "Write-Host '[3/11] Avast:' -NoNewline; " ^
+  "$avast = Get-Process AvastSvc,AvastUI -ErrorAction SilentlyContinue | Select -First 1; " ^
+  "if ($avast) { " ^
+  "  Write-Host ' DETECTED (add manually: Settings > General > Exclusions)' -ForegroundColor Yellow; $avFound++ " ^
+  "} else { Write-Host ' NOT DETECTED' } " ^
+  "Write-Host '[4/11] AVG:' -NoNewline; " ^
+  "$avg = Get-Process AVGSvc,AVGUI -ErrorAction SilentlyContinue | Select -First 1; " ^
+  "if ($avg) { " ^
+  "  Write-Host ' DETECTED (add manually: Settings > General > Exclusions)' -ForegroundColor Yellow; $avFound++ " ^
+  "} else { Write-Host ' NOT DETECTED' } " ^
+  "Write-Host '[5/11] Norton/Symantec:' -NoNewline; " ^
+  "$norton = Get-Process NortonSecurity,ccSvcHst -ErrorAction SilentlyContinue | Select -First 1; " ^
+  "if ($norton) { " ^
+  "  Write-Host ' DETECTED (add manually: Settings > Antivirus > Scans and Risks > Exclusions)' -ForegroundColor Yellow; $avFound++ " ^
+  "} else { Write-Host ' NOT DETECTED' } " ^
+  "Write-Host '[6/11] McAfee:' -NoNewline; " ^
+  "$mcafee = Get-Process McShield,McAPExe -ErrorAction SilentlyContinue | Select -First 1; " ^
+  "if ($mcafee) { " ^
+  "  Write-Host ' DETECTED (add manually: Virus and Spyware Protection > Excluded Files)' -ForegroundColor Yellow; $avFound++ " ^
+  "} else { Write-Host ' NOT DETECTED' } " ^
+  "Write-Host '[7/11] Kaspersky:' -NoNewline; " ^
+  "$kaspersky = Get-Process avp,kavfs* -ErrorAction SilentlyContinue | Select -First 1; " ^
+  "if ($kaspersky) { " ^
+  "  Write-Host ' DETECTED (add manually: Settings > Additional > Threats and Exclusions)' -ForegroundColor Yellow; $avFound++ " ^
+  "} else { Write-Host ' NOT DETECTED' } " ^
+  "Write-Host '[8/11] ESET:' -NoNewline; " ^
+  "$eset = Get-Process ekrn,egui -ErrorAction SilentlyContinue | Select -First 1; " ^
+  "if ($eset) { " ^
+  "  Write-Host ' DETECTED (add manually: Setup > Computer > Exclusions)' -ForegroundColor Yellow; $avFound++ " ^
+  "} else { Write-Host ' NOT DETECTED' } " ^
+  "Write-Host '[9/11] Avira:' -NoNewline; " ^
+  "$avira = Get-Process Avira.* -ErrorAction SilentlyContinue | Select -First 1; " ^
+  "if ($avira) { " ^
+  "  Write-Host ' DETECTED (add manually: System Scanner > Exceptions)' -ForegroundColor Yellow; $avFound++ " ^
+  "} else { Write-Host ' NOT DETECTED' } " ^
+  "Write-Host '[10/11] Trend Micro:' -NoNewline; " ^
+  "$trend = Get-Process TmListen,PccNTMon -ErrorAction SilentlyContinue | Select -First 1; " ^
+  "if ($trend) { " ^
+  "  Write-Host ' DETECTED (add manually: Settings > Exception List)' -ForegroundColor Yellow; $avFound++ " ^
+  "} else { Write-Host ' NOT DETECTED' } " ^
+  "Write-Host '[11/11] Malwarebytes:' -NoNewline; " ^
+  "$mwb = Get-Process mbam,mbamservice -ErrorAction SilentlyContinue | Select -First 1; " ^
+  "if ($mwb) { " ^
+  "  Write-Host ' DETECTED (add manually: Settings > Exclusions)' -ForegroundColor Yellow; $avFound++ " ^
+  "} else { Write-Host ' NOT DETECTED' } " ^
+  "Write-Host ''; " ^
+  "Write-Host \"Found $avFound antivirus product(s) on this system.\"; " ^
+  "Write-Host ''; " ^
+  "if ($avFound -gt 0) { " ^
+  "  Write-Host 'IMPORTANT: If you see DETECTED or FAILED above, please add manually:' -ForegroundColor Cyan; " ^
+  "  Write-Host \"  Exclusion path: $targetExe\" -ForegroundColor White; " ^
+  "  Write-Host \"  Or directory: $targetDir\" -ForegroundColor White; " ^
+  "  Write-Host '  See docs\\ANTIVIRUS_FIX.md for detailed instructions.' -ForegroundColor White; " ^
+  "  Write-Host ''; " ^
+  "}"
+
+echo.
 
 set "DOCS_PATH=%USERPROFILE%\Documents"
 
