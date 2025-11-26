@@ -63,7 +63,7 @@ Minimal hardware monitoring Half-Life style overlay theme for [Rainmeter](https:
 
 - Open **Command Prompt as Administrator**
 - Run `TempBridge\install.bat`
-- The script copies `TempBridge.exe` to `%ProgramData%\TempBridge`, registers a Windows service (LocalSystem, auto-start), and launches it hidden automatically
+- The script copies `TempBridge.exe` to `%ProgramData%\TempBridge`, registers a Task Scheduler job under your user (highest privileges), and launches it hidden on every logon
 - During install we automatically run `Unblock-File` so SmartScreen should not prompt; if your AV flags it, allow it once
 - Use `TempBridge\uninstall.bat` (Admin) if you want to remove the auto-start entry later
 
@@ -114,6 +114,7 @@ WindowY=40
 
 - The Windows graphics subsystem only updates this counter when a 3D workload is active
 - Make sure hardware-accelerated GPU scheduling is enabled (Settings → System → Display → Graphics)
+- Desktop Window Manager (DWM) must be enabled (it is on by default unless you use “classic” themes or remote services)
 
 **Disk always 0 MB/s?**
 
