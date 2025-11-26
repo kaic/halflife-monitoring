@@ -454,7 +454,32 @@ internal static class Program
         sb.AppendLine("DiskRead=" + diskRead.ToString("F1", CultureInfo.InvariantCulture));
         sb.AppendLine("DiskWrite=" + diskWrite.ToString("F1", CultureInfo.InvariantCulture));
 
-        File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
+        var content = sb.ToString();
+
+        // Retry mechanism to handle file locking (IOException) if Rainmeter is reading simultaneously
+        for (int i = 0; i < 3; i++)
+        {
+            try
+            {
+                // Use FileShare.ReadWrite to minimize locking conflicts
+                using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+                using var writer = new StreamWriter(fs, Encoding.UTF8);
+                writer.Write(content);
+                return; // Success
+            }
+            catch (IOException)
+            {
+                // Wait briefly before retrying
+                Thread.Sleep(50);
+            }
+            catch (Exception ex)
+            {
+                LogWarn($"Failed to write stats to {path}: {ex.Message}");
+                return;
+            }
+        }
+        
+        LogWarn($"Failed to write stats to {path} after 3 attempts (file locked?)");
     }
 
     private static void LogInfo(string message) => Log("INFO", message);
