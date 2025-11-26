@@ -61,32 +61,11 @@ echo [INFO] Ensuring antivirus trusts TempBridge (Microsoft Defender)...
 set "DOCS_PATH=%USERPROFILE%\Documents"
 
 echo Writing launcher script to %RUNNER_PS% ...
-(
-    echo $ErrorActionPreference = 'Stop'
-    echo $docs = '%DOCS_PATH%'
-    echo $exe = '%TARGET_DIR%\TempBridge.exe'
-    echo $log = '%LOG_FILE%'
-    echo $wd = '%TARGET_DIR%'
-    echo function Log { param([string]$m^) $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'; Add-Content -LiteralPath $log -Value "[$ts] $m" }
-    echo try {
-    echo ^   if (-not (Test-Path -LiteralPath $exe^)) { Log "ERROR missing exe $exe"; exit 1 }
-    echo ^   Log "Start user=$env:USERNAME docs=$docs exe=$exe"
-    echo ^   $psi = New-Object System.Diagnostics.ProcessStartInfo
-    echo ^   $psi.FileName = $exe
-    echo ^   $psi.WorkingDirectory = $wd
-    echo ^   $psi.UseShellExecute = $false
-    echo ^   $psi.CreateNoWindow = $true
-    echo ^   $psi.WindowStyle = 'Hidden'
-    echo ^   $psi.Environment['TEMPBRIDGE_DOCUMENTS'] = $docs
-    echo ^   $p = [System.Diagnostics.Process]::Start($psi)
-    echo ^   if (-not $p^) { Log "ERROR failed to start process"; exit 1 }
-    echo ^   Log "Started TempBridge pid=$($p.Id)"
-    echo ^   exit 0
-    echo } catch {
-    echo ^   Log ("ERROR " + $_.Exception.Message)
-    echo ^   exit 1
-    echo }
-) > "%RUNNER_PS%"
+"%POWERSHELL_PATH%" -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$docs='%DOCS_PATH%'; $exe='%TARGET_DIR%\TempBridge.exe'; $log='%LOG_FILE%'; $wd='%TARGET_DIR%';" ^
+  "$template = @\"`n$ErrorActionPreference = 'Stop'`n$docs = \"__DOCS__\"`n$exe = \"__EXE__\"`n$log = \"__LOG__\"`n$wd = \"__WD__\"`nfunction Log { param([string]$m) $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'; Add-Content -LiteralPath $log -Value \"[$ts] $m\" }`ntry {`n    if (-not (Test-Path -LiteralPath $exe)) { Log \"ERROR missing exe $exe\"; exit 1 }`n    Log \"Start user=$env:USERNAME docs=$docs exe=$exe\"`n    $psi = New-Object System.Diagnostics.ProcessStartInfo`n    $psi.FileName = $exe`n    $psi.WorkingDirectory = $wd`n    $psi.UseShellExecute = $false`n    $psi.CreateNoWindow = $true`n    $psi.WindowStyle = 'Hidden'`n    $psi.Environment['TEMPBRIDGE_DOCUMENTS'] = $docs`n    $p = [System.Diagnostics.Process]::Start($psi)`n    if (-not $p) { Log \"ERROR failed to start process\"; exit 1 }`n    Log \"Started TempBridge pid=$($p.Id)\"`n    exit 0`n} catch {`n    Log (\"ERROR \" + $_.Exception.Message)`n    exit 1`n}`n\"@;" ^
+  "$content = $template.Replace('__DOCS__',$docs).Replace('__EXE__',$exe).Replace('__LOG__',$log).Replace('__WD__',$wd);" ^
+  "Set-Content -LiteralPath '%RUNNER_PS%' -Value $content -Encoding UTF8"
 
 if %errorLevel% neq 0 (
     echo [ERROR] Failed to write the launcher script.
