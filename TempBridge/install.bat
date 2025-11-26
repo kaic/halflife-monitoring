@@ -2,15 +2,15 @@
 setlocal
 
 echo ========================================
-echo TempBridge - Instalador em Segundo Plano
+echo TempBridge - Background Installer
 echo ========================================
 echo.
 
-:: Verifica permissao de administrador
+:: Check for elevation
 net session >nul 2>&1
 if %errorLevel% neq 0 (
-    echo [ERRO] Este script precisa ser executado como Administrador.
-    echo Clique com o botao direito e escolha "Executar como administrador".
+    echo [ERROR] This script must run as Administrator.
+    echo Right-click and choose "Run as administrator".
     pause
     exit /b 1
 )
@@ -26,14 +26,14 @@ set "TASK_NAME=TempBridgeMonitoring"
 set "EXE_TARGET=%TARGET_DIR%\TempBridge.exe"
 
 if not exist "%EXE_SOURCE%" (
-    echo [ERRO] Nao encontrei o TempBridge compilado em:
+    echo [ERROR] Could not find TempBridge at:
     echo   %EXE_SOURCE%
-    echo Gere o executavel com "dotnet publish" antes de rodar o instalador.
+    echo Publish the executable with "dotnet publish" before running the installer.
     pause
     exit /b 1
 )
 
-echo Limpando instalacoes antigas...
+echo Cleaning previous installs...
 reg delete "HKLM\Software\Microsoft\Windows\CurrentVersion\Run" /v "%RUN_KEY%" /f >nul 2>&1
 schtasks /Delete /TN "%TASK_NAME%" /F >nul 2>&1
 sc stop "%SERVICE_NAME%" >nul 2>&1
@@ -47,22 +47,22 @@ if not exist "%TARGET_DIR%" (
 
 copy /Y "%EXE_SOURCE%" "%EXE_TARGET%" >nul
 if %errorLevel% neq 0 (
-    echo [ERRO] Falha ao copiar o TempBridge para %EXE_TARGET%.
+    echo [ERROR] Failed to copy TempBridge to %EXE_TARGET%.
     pause
     exit /b 1
 )
 
-echo Removendo marca de arquivo baixado (SmartScreen)...
-"%POWERSHELL_PATH%" -NoProfile -ExecutionPolicy Bypass -Command "try { Unblock-File -LiteralPath '%EXE_TARGET%' -ErrorAction Stop } catch { exit 1 }"
+echo Removing downloaded-file mark (SmartScreen)...
+"%POWERSHELL_PATH%" -NoProfile -ExecutionPolicy Bypass -Command "try { Unblock-File -LiteralPath '%EXE_TARGET%' -ErrorAction Stop } catch { exit 2 }"
 if %errorLevel% neq 0 (
-    echo [AVISO] Nao foi possivel remover a marcacao. Windows SmartScreen pode pedir confirmacao no primeiro start.
+    echo [WARN] Could not clear the Alternate Data Stream. Windows SmartScreen may still prompt once.
 ) else (
-    echo [OK] Marca de seguranca removida com sucesso.
+    echo [OK] Alternate Data Stream cleared successfully.
 )
 
 set "RUNNER_LOG=%TARGET_DIR%\launcher.log"
 
-echo [INFO] Criando script de inicializacao oculta em:
+echo [INFO] Creating hidden launcher script:
 set "_tmp=%RUNNER_PS%"
 echo   %_tmp%
 (
@@ -91,36 +91,36 @@ echo   %_tmp%
 ) > "%RUNNER_PS%"
 
 if %errorLevel% neq 0 (
-    echo [ERRO] Falha ao criar o script auxiliar.
+    echo [ERROR] Could not create the helper script.
     pause
     exit /b 1
 )
 
-echo Registrando execucao automatica no logon...
+echo Registering autorun on logon...
 reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\Run" /v "%RUN_KEY%" /t REG_SZ /d "\"%POWERSHELL_PATH%\" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"%RUNNER_PS%\"" /f >nul
 if %errorLevel% neq 0 (
-    echo [ERRO] Nao foi possivel gravar a chave de inicializacao.
+    echo [ERROR] Unable to write the startup registry key.
     pause
     exit /b 1
 )
 
-echo Disparando o TempBridge agora para validar...
+echo Starting TempBridge now to validate...
 "%POWERSHELL_PATH%" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "%RUNNER_PS%" >nul 2>&1
 
 if %errorLevel% neq 0 (
-    echo [AVISO] TempBridge nao iniciou automaticamente. Verifique o arquivo de log:
+    echo [WARN] TempBridge did not start automatically. Check the launcher log:
     echo   %RUNNER_LOG%
 ) else (
-    echo [OK] TempBridge iniciado em segundo plano. Arquivo de log:
+    echo [OK] TempBridge is running in the background. Log file:
     echo   %RUNNER_LOG%
 )
 
 echo.
 echo ========================================
-echo Instalacao concluida!
+echo Installation completed!
 echo ========================================
 echo.
-echo O TempBridge sera carregado oculto sempre que qualquer usuario fizer logon.
-echo Execute "uninstall.bat" (Admin) para remover.
+echo TempBridge will load hidden for every user logon.
+echo Run "uninstall.bat" (Admin) to remove.
 echo.
 pause

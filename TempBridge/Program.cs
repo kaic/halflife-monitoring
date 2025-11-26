@@ -113,9 +113,10 @@ internal static class Program
 
                     if (DateTime.UtcNow >= nextStatusLog)
                     {
+                        float gpuFps = readings.GpuFps ?? 0f;
                         LogInfo(
                             $"CPU {readings.CpuUsage:F1}% ({readings.CpuTemp:F1}°C) | " +
-                            $"GPU {readings.GpuUsage:F1}% ({readings.GpuTemp:F1}°C) | " +
+                            $"GPU {readings.GpuUsage:F1}% ({readings.GpuTemp:F1}°C) {gpuFps:F1} FPS | " +
                             $"Disk R:{readings.DiskRead:F1} W:{readings.DiskWrite:F1} MB/s");
                         nextStatusLog = DateTime.UtcNow + StatusLogInterval;
                     }
@@ -136,13 +137,14 @@ internal static class Program
         }
     }
 
-    private static (float? CpuTemp, float? GpuTemp, float? CpuUsage, float? GpuUsage, float? DiskRead, float? DiskWrite)
+    private static (float? CpuTemp, float? GpuTemp, float? CpuUsage, float? GpuUsage, float? GpuFps, float? DiskRead, float? DiskWrite)
         ReadSensors(Computer computer, bool includeStorageSensors)
     {
         float? cpuTemp = null;
         float? gpuTemp = null;
         float? cpuUsage = null;
         float? gpuUsage = null;
+        float? gpuFps = null;
         float? diskRead = null;
         float? diskWrite = null;
 
@@ -162,7 +164,7 @@ internal static class Program
                 case HardwareType.GpuNvidia:
                 case HardwareType.GpuAmd:
                 case HardwareType.GpuIntel:
-                    (gpuTemp, gpuUsage) = ReadGpu(hardware, gpuTemp, gpuUsage);
+                    (gpuTemp, gpuUsage, gpuFps) = ReadGpu(hardware, gpuTemp, gpuUsage, gpuFps);
                     break;
 
                 case HardwareType.Storage:
@@ -181,7 +183,7 @@ internal static class Program
             }
         }
 
-        return (cpuTemp, gpuTemp, cpuUsage, gpuUsage, diskRead, diskWrite);
+        return (cpuTemp, gpuTemp, cpuUsage, gpuUsage, gpuFps, diskRead, diskWrite);
     }
 
     private static bool ShouldProcessHardware(HardwareType type, bool includeStorageSensors) => type switch
@@ -280,11 +282,11 @@ internal static class Program
         {
             temp = tempSum / tempCount;
             if (!_cpuDebugShown)
-                LogInfo($"Usando média de {tempCount} sensores: {temp:F1}°C");
+                LogInfo($"Using the average of {tempCount} sensors: {temp:F1}°C");
         }
         else if (temp is null && !_cpuDebugShown)
         {
-            LogWarn("Temperatura de CPU não disponível (sensor não exposto pelo hardware)");
+            LogWarn("CPU temperature unavailable (sensor not exposed by the hardware)");
         }
 
         if (usage is null && loadCount > 0)
@@ -293,13 +295,15 @@ internal static class Program
         return (temp, usage);
     }
 
-    private static (float? Temp, float? Usage) ReadGpu(
+    private static (float? Temp, float? Usage, float? Fps) ReadGpu(
         IHardware gpu,
         float? existingTemp,
-        float? existingUsage)
+        float? existingUsage,
+        float? existingFps)
     {
         float? temp = existingTemp;
         float? usage = existingUsage;
+        float? fps = existingFps;
 
         float tempSum = 0f;
         int tempCount = 0;
@@ -338,6 +342,16 @@ internal static class Program
                         loadCount++;
                     }
                     break;
+
+                case SensorType.SmallData:
+                case SensorType.Data:
+                case SensorType.Throughput:
+                case SensorType.Frequency:
+                    if (LooksLikeFpsSensor(sensor.Name))
+                    {
+                        fps = sensor.Value;
+                    }
+                    break;
             }
         }
 
@@ -347,7 +361,7 @@ internal static class Program
         if (usage is null && loadCount > 0)
             usage = loadSum / loadCount;
 
-        return (temp, usage);
+        return (temp, usage, fps);
     }
 
     private static (float? Read, float? Write) ReadDisk(
@@ -390,7 +404,7 @@ internal static class Program
                     sensor.Name.Contains("Motherboard", StringComparison.OrdinalIgnoreCase) ||
                     sensor.Name.Contains("Chipset", StringComparison.OrdinalIgnoreCase))
                 {
-                    LogInfo($"Usando temperatura da motherboard: {sensor.Name} = {sensor.Value:F1}°C");
+                    LogInfo($"Using motherboard temperature: {sensor.Name} = {sensor.Value:F1}°C");
                     return sensor.Value;
                 }
             }
@@ -399,12 +413,13 @@ internal static class Program
     }
 
     private static void WriteHwStats(string path,
-        (float? CpuTemp, float? GpuTemp, float? CpuUsage, float? GpuUsage, float? DiskRead, float? DiskWrite) r)
+        (float? CpuTemp, float? GpuTemp, float? CpuUsage, float? GpuUsage, float? GpuFps, float? DiskRead, float? DiskWrite) r)
     {
         float cpuTemp = r.CpuTemp ?? 0;
         float gpuTemp = r.GpuTemp ?? 0;
         float cpuUsage = r.CpuUsage ?? 0;
         float gpuUsage = r.GpuUsage ?? 0;
+        float gpuFps = r.GpuFps ?? 0;
         float diskRead = r.DiskRead ?? 0;
         float diskWrite = r.DiskWrite ?? 0;
 
@@ -413,6 +428,7 @@ internal static class Program
         sb.AppendLine("GpuTemp=" + gpuTemp.ToString("F1", CultureInfo.InvariantCulture));
         sb.AppendLine("CpuUsage=" + cpuUsage.ToString("F1", CultureInfo.InvariantCulture));
         sb.AppendLine("GpuUsage=" + gpuUsage.ToString("F1", CultureInfo.InvariantCulture));
+        sb.AppendLine("GpuFps=" + gpuFps.ToString("F1", CultureInfo.InvariantCulture));
         sb.AppendLine("DiskRead=" + diskRead.ToString("F1", CultureInfo.InvariantCulture));
         sb.AppendLine("DiskWrite=" + diskWrite.ToString("F1", CultureInfo.InvariantCulture));
 
@@ -439,5 +455,13 @@ internal static class Program
         {
             // Logging should never crash the bridge
         }
+    }
+
+    private static bool LooksLikeFpsSensor(string name)
+    {
+        return name.Contains("FPS", StringComparison.OrdinalIgnoreCase) ||
+               name.Contains("Frame Rate", StringComparison.OrdinalIgnoreCase) ||
+               name.Contains("FrameRate", StringComparison.OrdinalIgnoreCase) ||
+               name.Contains("Frames Per Second", StringComparison.OrdinalIgnoreCase);
     }
 }

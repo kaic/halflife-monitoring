@@ -1,19 +1,19 @@
 #!/bin/bash
 
 echo "========================================"
-echo "TempBridge - Build para Windows (Linux)"
+echo "TempBridge - Windows Build (Linux host)"
 echo "========================================"
 echo ""
 
-# Verifica se .NET SDK está instalado
+# Ensure .NET SDK is installed
 if ! command -v dotnet &> /dev/null; then
-    echo "[!] .NET SDK não encontrado. Instalando..."
+    echo "[!] .NET SDK not found. Installing..."
     echo ""
     
-    # Detecta a distribuição
+    # Detect distro
     if [ -f /etc/debian_version ]; then
         # Ubuntu/Debian
-        echo "Detectado: Ubuntu/Debian"
+        echo "Detected: Ubuntu/Debian"
         wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
         chmod +x dotnet-install.sh
         ./dotnet-install.sh --channel 8.0
@@ -21,53 +21,53 @@ if ! command -v dotnet &> /dev/null; then
         rm dotnet-install.sh
     elif [ -f /etc/fedora-release ]; then
         # Fedora
-        echo "Detectado: Fedora"
+        echo "Detected: Fedora"
         sudo dnf install dotnet-sdk-8.0 -y
     elif [ -f /etc/arch-release ]; then
         # Arch
-        echo "Detectado: Arch Linux"
+        echo "Detected: Arch Linux"
         sudo pacman -S dotnet-sdk-8.0 --noconfirm
     else
-        echo "[ERRO] Distribuição não suportada automaticamente."
-        echo "Instale manualmente: https://dotnet.microsoft.com/download"
+        echo "[ERROR] Unsupported distro for auto-install."
+        echo "Install manually: https://dotnet.microsoft.com/download"
         exit 1
     fi
     
     echo ""
 fi
 
-# Verifica novamente
+# Double-check
 if ! command -v dotnet &> /dev/null; then
-    echo "[ERRO] Falha ao instalar .NET SDK"
+    echo "[ERROR] Failed to install .NET SDK"
     exit 1
 fi
 
-echo "[OK] .NET SDK instalado"
+echo "[OK] .NET SDK available"
 dotnet --version
 echo ""
 
-# Navega para a pasta do projeto
+# Go to project folder
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$SCRIPT_DIR/TempBridge"
 
 if [ ! -f "$PROJECT_DIR/TempBridge.csproj" ]; then
-    echo "[ERRO] TempBridge.csproj não encontrado em: $PROJECT_DIR"
+    echo "[ERROR] TempBridge.csproj not found at: $PROJECT_DIR"
     exit 1
 fi
 
 cd "$PROJECT_DIR"
 
-echo "[1/3] Restaurando dependências..."
+echo "[1/3] Restoring dependencies..."
 dotnet restore
 if [ $? -ne 0 ]; then
-    echo "[ERRO] Falha ao restaurar dependências"
+    echo "[ERROR] Restore failed"
     exit 1
 fi
 echo ""
 
-echo "[2/3] Compilando para Windows (win-x64)..."
-echo "       - Self-contained: true (NÃO requer .NET Runtime no Windows)"
-echo "       - Single file: true (executável único ~70MB)"
+echo "[2/3] Publishing for Windows (win-x64)..."
+echo "       - Self-contained: true (no .NET Runtime required on Windows)"
+echo "       - Single file: true (single executable ~70MB)"
 echo ""
 
 dotnet publish -c Release -r win-x64 \
@@ -78,28 +78,28 @@ dotnet publish -c Release -r win-x64 \
 
 if [ $? -ne 0 ]; then
     echo ""
-    echo "[ERRO] Falha na compilação"
+    echo "[ERROR] Publish failed"
     exit 1
 fi
 
 echo ""
-echo "[3/3] Copiando arquivos adicionais..."
+echo "[3/3] Copying auxiliary files..."
 cp "$PROJECT_DIR/install.bat" "$SCRIPT_DIR/dist/TempBridge/" 2>/dev/null
 
 echo ""
 echo "========================================"
-echo "✓ Build Concluído!"
+echo "✓ Build Completed!"
 echo "========================================"
 echo ""
-echo "Executável gerado em:"
+echo "Executable generated at:"
 echo "  📁 $SCRIPT_DIR/dist/TempBridge/TempBridge.exe"
 echo ""
-echo "Próximos passos:"
-echo "  1. Copie a pasta 'dist/TempBridge' para o Windows"
-echo "  2. No Windows, certifique-se de ter .NET 8 Runtime:"
+echo "Next steps:"
+echo "  1. Copy the 'dist/TempBridge' folder to Windows"
+echo "  2. On Windows ensure .NET 8 Runtime is installed:"
 echo "     https://dotnet.microsoft.com/download/dotnet/8.0/runtime"
-echo "  3. Execute: TempBridge.exe"
+echo "  3. Run: TempBridge.exe"
 echo ""
-echo "Tamanho do arquivo:"
+echo "File size:"
 ls -lh "$SCRIPT_DIR/dist/TempBridge/TempBridge.exe" | awk '{print "  " $9 " -> " $5}'
 echo ""
