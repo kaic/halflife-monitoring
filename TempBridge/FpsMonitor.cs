@@ -31,7 +31,7 @@ internal sealed class FpsMonitor : IDisposable
     {
         try
         {
-            if (!TraceEventSession.IsElevated())
+            if (TraceEventSession.IsElevated() != true)
             {
                 logWarn("FPS monitor requires elevated privileges; skipping.");
                 return null;
