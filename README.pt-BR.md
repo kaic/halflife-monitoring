@@ -57,11 +57,12 @@ Minimal hardware monitoring Half-Life style overlay theme for [Rainmeter](https:
 - Double-click `HalfLifeMonitoring.rmskin`
 - Follow the Rainmeter installer prompts
 
-#### 2. Install TempBridge
+#### 2. Instalar o TempBridge (processo oculto)
 
-- Copy the `TempBridge` folder to `C:\Program Files\HalfLifeMonitoring\`
-- Run `install.bat` to add to Windows Startup
-- Start `TempBridge.exe`
+- Abra um **Prompt de Comando como Administrador**
+- Execute `TempBridge\install.bat`
+- O script copia o `TempBridge.exe` para `%ProgramData%\TempBridge`, cria a entrada em `HKLM\Software\...\Run` e garante que ele inicie oculto em todo logon
+- Se quiser remover depois, execute `TempBridge\uninstall.bat` (Administrador)
 
 #### 3. Load the Skin
 

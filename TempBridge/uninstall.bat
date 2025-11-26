@@ -1,52 +1,50 @@
 @echo off
+setlocal
+
 echo ========================================
 echo TempBridge - Desinstalador
 echo ========================================
 echo.
 
-:: Verifica Permissoes de Admin
+:: Verifica permissoes
 net session >nul 2>&1
 if %errorLevel% neq 0 (
-    echo [ERRO] Este script precisa ser executado como Administrador!
+    echo [ERRO] Execute este script como Administrador.
     pause
     exit /b 1
 )
 
+set "RUN_KEY=TempBridge"
+set "TARGET_DIR=%ProgramData%\TempBridge"
+set "SERVICE_NAME=TempBridgeSvc"
 set "TASK_NAME=TempBridgeMonitoring"
 
-echo Parando processo TempBridge...
+set "POWERSHELL_PATH=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
+set "RUNNER_PS=%TARGET_DIR%\run_tempbridge.ps1"
+
+echo Finalizando processos ativos...
 taskkill /F /IM TempBridge.exe >nul 2>&1
 
-echo.
-echo Removendo tarefa agendada...
-schtasks /Delete /TN "%TASK_NAME%" /F
-
-:: Limpeza de legado (versoes anteriores)
-set "OLD_SHORTCUT=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\TempBridge.lnk"
-set "SCRIPT_DIR=%~dp0"
-set "OLD_VBS=%SCRIPT_DIR%TempBridge_Hidden.vbs"
-
-if exist "%OLD_SHORTCUT%" (
-    echo [INFO] Removendo atalho antigo do Startup...
-    del "%OLD_SHORTCUT%"
-)
-if exist "%OLD_VBS%" (
-    echo [INFO] Removendo script VBS antigo...
-    del "%OLD_VBS%"
+if exist "%RUNNER_PS%" (
+    "%POWERSHELL_PATH%" -Command "Get-Process TempBridge -ErrorAction SilentlyContinue | Stop-Process -Force" >nul 2>&1
 )
 
-if %errorLevel% equ 0 (
-    echo [OK] TempBridge removido da inicializacao.
-) else (
-    echo [AVISO] Tarefa nao encontrada ou erro ao remover.
+echo Removendo inicializacao automatica...
+reg delete "HKLM\Software\Microsoft\Windows\CurrentVersion\Run" /v "%RUN_KEY%" /f >nul 2>&1
+schtasks /Delete /TN "%TASK_NAME%" /F >nul 2>&1
+sc stop "%SERVICE_NAME%" >nul 2>&1
+sc delete "%SERVICE_NAME%" >nul 2>&1
+
+if exist "%TARGET_DIR%" (
+    echo Limpando arquivos em %TARGET_DIR% ...
+    rd /S /Q "%TARGET_DIR%"
 )
 
 echo.
 echo ========================================
-echo Desinstalacao concluida!
+echo TempBridge removido do startup.
 echo ========================================
 echo.
-echo TempBridge nao iniciara mais automaticamente.
-echo Voce pode executar manualmente se precisar.
+echo Rode install.bat (Admin) se quiser habilitar novamente.
 echo.
 pause
