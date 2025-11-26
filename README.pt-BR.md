@@ -16,6 +16,7 @@ Minimal hardware monitoring Half-Life style overlay theme for [Rainmeter](https:
 
 - **CPU**: Usage % + Temperature °C
 - **GPU**: Usage % + Temperature °C *(NVIDIA/AMD/Intel)*
+- **FPS do desktop**: Coletado via contador `Win32_PerfFormattedData_DxgKrnl_GraphicsSubsystem` do Windows
 - **RAM**: Usage in GB
 - **Disk**: Read/Write activity in MB/s
 - **Network**: Download/Upload in MB/s
@@ -106,6 +107,10 @@ WindowY=40
 - Ensure TempBridge is running
 - Check that `@Resources/hwstats.txt` exists and is being updated
 - Try restarting TempBridge
+
+**FPS sempre 0?**
+- O contador gráfico do Windows só atualiza quando existe um app/jogo 3D em execução
+- Ative “Agendamento de GPU com aceleração de hardware” em Configurações → Sistema → Vídeo → Gráficos
 
 **Disk always 0 MB/s?**
 - Open Command Prompt as Administrator

@@ -78,12 +78,12 @@ internal static class Program
             IsControllerEnabled = false
         };
 
-        FpsMonitor? fpsMonitor = null;
+        Win32FpsReader? fpsReader = null;
 
         try
         {
             computer.Open();
-            fpsMonitor = FpsMonitor.TryStart(LogInfo, LogWarn);
+            fpsReader = Win32FpsReader.TryCreate(LogInfo, LogWarn);
             LogInfo($"TempBridge is writing metrics to {hwStatsPath}");
 
             var nextStatusLog = DateTime.UtcNow;
@@ -95,7 +95,7 @@ internal static class Program
                     var readings = ReadSensors(
                         computer,
                         includeStorageSensors: !useDiskCounters,
-                        externalGpuFps: fpsMonitor?.CurrentFps);
+                        externalGpuFps: fpsReader?.ReadFps());
 
                     if (useDiskCounters && diskReadCounter != null && diskWriteCounter != null)
                     {
@@ -137,7 +137,7 @@ internal static class Program
         }
         finally
         {
-            fpsMonitor?.Dispose();
+            fpsReader?.Dispose();
             computer.Close();
             diskReadCounter?.Dispose();
             diskWriteCounter?.Dispose();
