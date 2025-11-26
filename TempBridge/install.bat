@@ -54,6 +54,12 @@ echo Removing downloaded-file mark (SmartScreen)...
 "%POWERSHELL_PATH%" -NoProfile -ExecutionPolicy Bypass -Command "try { Unblock-File -LiteralPath '%EXE_SOURCE%' -ErrorAction Stop } catch { }"
 "%POWERSHELL_PATH%" -NoProfile -ExecutionPolicy Bypass -Command "try { Unblock-File -LiteralPath '%TARGET_DIR%\TempBridge.exe' -ErrorAction Stop } catch { exit 2 }"
 
+echo Opening the target folder so you can verify files...
+start "" "%TARGET_DIR%"
+if %errorLevel% neq 0 (
+    echo [WARN] Unable to open the folder automatically. Please navigate to %TARGET_DIR%.
+)
+
 echo [INFO] Ensuring antivirus trusts TempBridge (Microsoft Defender)...
 "%POWERSHELL_PATH%" -NoProfile -ExecutionPolicy Bypass -Command ^
   "if (Get-Command Add-MpPreference -ErrorAction SilentlyContinue) { try { Add-MpPreference -ExclusionPath '%TARGET_DIR%' -ErrorAction Stop; } catch {} }"
@@ -117,9 +123,11 @@ if %errorLevel% neq 0 (
 
 echo.
 echo ========================================
-echo Installation completed!
+echo Installation completed via Run key!
 echo ========================================
 echo.
+echo [INFO] Press ENTER to exit or check the log at:
+echo   %LOG_FILE%
 pause
 goto END
 
@@ -145,8 +153,10 @@ if %errorLevel% neq 0 (
 
 echo.
 echo ========================================
-echo Installation completed!
+echo Installation completed via Scheduled Task!
 echo ========================================
+echo.
+if exist "%TASK_LOG%" type "%TASK_LOG%"
 echo.
 pause
 
