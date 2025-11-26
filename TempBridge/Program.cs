@@ -1,6 +1,7 @@
-using System.Globalization;
-using System.Text;
 using System.Diagnostics;
+using System.Globalization;
+using System.Linq;
+using System.Text;
 using LibreHardwareMonitor.Hardware;
 
 namespace TempBridge;
@@ -8,140 +9,135 @@ namespace TempBridge;
 internal static class Program
 {
     private static readonly TimeSpan LoopDelay = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan StatusLogInterval = TimeSpan.FromSeconds(10);
+    private static readonly string BaseDirectory = AppContext.BaseDirectory;
+    private static readonly string LogPath = Path.Combine(BaseDirectory, "tempbridge.log");
+    private static readonly object LogSync = new();
     private static bool _cpuDebugShown = false;
 
     public static async Task Main()
     {
-        // Garante que o diretório de trabalho seja o do executável (fix para Task Scheduler)
-        var exePath = AppDomain.CurrentDomain.BaseDirectory;
-        Directory.SetCurrentDirectory(exePath);
+        Directory.SetCurrentDirectory(BaseDirectory);
 
         try
         {
-            await Run();
+            await Run().ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            var crashLog = Path.Combine(exePath, "crash.log");
+            var crashLog = Path.Combine(BaseDirectory, "crash.log");
             File.AppendAllText(crashLog, $"[{DateTime.Now}] FATAL ERROR: {ex}\n");
+            LogError($"Fatal error: {ex}");
         }
     }
 
     private static async Task Run()
     {
-        // Allow overriding Documents path (useful when running as SYSTEM via Task Scheduler)
         var overrideDocs = Environment.GetEnvironmentVariable("TEMPBRIDGE_DOCUMENTS");
         var documents = string.IsNullOrWhiteSpace(overrideDocs)
             ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
             : overrideDocs;
-        var hwStatsPath = Path.Combine(
-            documents,
-            "Rainmeter",
-            "Skins",
-            "HalfLifeMonitoring",
-            "@Resources",
-            "hwstats.txt");
+        var hwStatsPath = Path.Combine(documents, "Rainmeter", "Skins", "HalfLifeMonitoring", "@Resources", "hwstats.txt");
 
         var dir = Path.GetDirectoryName(hwStatsPath);
         if (!string.IsNullOrEmpty(dir))
             Directory.CreateDirectory(dir);
+
+        PerformanceCounter? diskReadCounter = null;
+        PerformanceCounter? diskWriteCounter = null;
+        var useDiskCounters = false;
+
+        try
+        {
+            diskReadCounter = new PerformanceCounter("PhysicalDisk", "Disk Read Bytes/sec", "_Total");
+            diskWriteCounter = new PerformanceCounter("PhysicalDisk", "Disk Write Bytes/sec", "_Total");
+
+            diskReadCounter.NextValue();
+            diskWriteCounter.NextValue();
+
+            useDiskCounters = true;
+            LogInfo("Disk performance counters initialized.");
+        }
+        catch (Exception ex)
+        {
+            diskReadCounter?.Dispose();
+            diskWriteCounter?.Dispose();
+            diskReadCounter = null;
+            diskWriteCounter = null;
+            LogWarn($"Unable to initialize disk performance counters: {ex.Message}. Using LibreHardwareMonitor for disk throughput.");
+        }
 
         var computer = new Computer
         {
             IsCpuEnabled = true,
             IsGpuEnabled = true,
             IsMemoryEnabled = false,
-            IsMotherboardEnabled = true,  // Habilitado para ler temp da motherboard
+            IsMotherboardEnabled = true,
             IsNetworkEnabled = false,
-            IsStorageEnabled = true,  // Mantém habilitado (tentativa)
+            IsStorageEnabled = true,
             IsControllerEnabled = false
         };
-
-        // Performance Counters para Disco (fallback mais confiável)
-        PerformanceCounter? diskReadCounter = null;
-        PerformanceCounter? diskWriteCounter = null;
-
-        try
-        {
-            diskReadCounter = new PerformanceCounter("PhysicalDisk", "Disk Read Bytes/sec", "_Total");
-            diskWriteCounter = new PerformanceCounter("PhysicalDisk", "Disk Write Bytes/sec", "_Total");
-            
-            // Primeira leitura é sempre 0, então descartamos
-            diskReadCounter.NextValue();
-            diskWriteCounter.NextValue();
-            
-            Console.WriteLine("[OK] Performance Counters de disco inicializados");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[WARN] Não foi possível inicializar Performance Counters: {ex.Message}");
-            Console.WriteLine("[INFO] Disco será monitorado via LibreHardwareMonitor (pode não funcionar)");
-        }
 
         try
         {
             computer.Open();
+            LogInfo($"TempBridge is writing metrics to {hwStatsPath}");
 
-            Console.WriteLine("╔═══════════════════════════════════════╗");
-            Console.WriteLine("║      TempBridge - HalfLife Monitor    ║");
-            Console.WriteLine("╚═══════════════════════════════════════╝");
-            Console.WriteLine();
-            Console.WriteLine($"Escrevendo em: {hwStatsPath}");
-            Console.WriteLine("Feche esta janela para encerrar.");
-            Console.WriteLine();
+            var nextStatusLog = DateTime.UtcNow;
 
             while (true)
             {
                 try
                 {
-                    var readings = ReadSensors(computer);
+                    var readings = ReadSensors(computer, includeStorageSensors: !useDiskCounters);
 
-                    // Se Performance Counters estiverem disponíveis, usa eles para disco
-                    if (diskReadCounter != null && diskWriteCounter != null)
+                    if (useDiskCounters && diskReadCounter != null && diskWriteCounter != null)
                     {
                         try
                         {
-                            float diskReadBytes = diskReadCounter.NextValue();
-                            float diskWriteBytes = diskWriteCounter.NextValue();
-                            
-                            // Converte para MB/s
-                            readings.DiskRead = diskReadBytes / 1048576f;
-                            readings.DiskWrite = diskWriteBytes / 1048576f;
+                            readings.DiskRead = diskReadCounter.NextValue() / 1048576f;
+                            readings.DiskWrite = diskWriteCounter.NextValue() / 1048576f;
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            // Se falhar, mantém os valores do LibreHardwareMonitor (ou 0)
+                            LogWarn($"Performance counters failed ({ex.Message}); switching to LibreHardwareMonitor.");
+                            useDiskCounters = false;
+                            diskReadCounter.Dispose();
+                            diskWriteCounter.Dispose();
+                            diskReadCounter = null;
+                            diskWriteCounter = null;
                         }
                     }
 
                     WriteHwStats(hwStatsPath, readings);
 
-                    // Log a cada 10 segundos para não poluir o console
-                    if (DateTime.Now.Second % 10 == 0)
+                    if (DateTime.UtcNow >= nextStatusLog)
                     {
-                        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] " +
-                            $"CPU: {readings.CpuUsage:F1}% ({readings.CpuTemp:F1}°C) | " +
-                            $"GPU: {readings.GpuUsage:F1}% ({readings.GpuTemp:F1}°C) | " +
-                            $"Disk: R:{readings.DiskRead:F1} W:{readings.DiskWrite:F1} MB/s");
+                        LogInfo(
+                            $"CPU {readings.CpuUsage:F1}% ({readings.CpuTemp:F1}°C) | " +
+                            $"GPU {readings.GpuUsage:F1}% ({readings.GpuTemp:F1}°C) | " +
+                            $"Disk R:{readings.DiskRead:F1} W:{readings.DiskWrite:F1} MB/s");
+                        nextStatusLog = DateTime.UtcNow + StatusLogInterval;
                     }
                 }
                 catch (Exception ex)
                 {
-                    // Não derruba o loop por causa de um erro
-                    Console.Error.WriteLine($"[ERRO] {ex.Message}");
+                    LogError($"Read loop error: {ex.Message}");
                 }
 
-                await Task.Delay(LoopDelay);
+                await Task.Delay(LoopDelay).ConfigureAwait(false);
             }
         }
         finally
         {
             computer.Close();
+            diskReadCounter?.Dispose();
+            diskWriteCounter?.Dispose();
         }
     }
 
     private static (float? CpuTemp, float? GpuTemp, float? CpuUsage, float? GpuUsage, float? DiskRead, float? DiskWrite)
-        ReadSensors(Computer computer)
+        ReadSensors(Computer computer, bool includeStorageSensors)
     {
         float? cpuTemp = null;
         float? gpuTemp = null;
@@ -152,6 +148,9 @@ internal static class Program
 
         foreach (var hardware in computer.Hardware)
         {
+            if (!ShouldProcessHardware(hardware.HardwareType, includeStorageSensors))
+                continue;
+
             hardware.Update();
 
             switch (hardware.HardwareType)
@@ -171,7 +170,6 @@ internal static class Program
                     break;
 
                 case HardwareType.Motherboard:
-                    // Se não temos CPU temp, tenta usar motherboard temp
                     if (cpuTemp is null)
                         cpuTemp = ReadMotherboardTemp(hardware);
                     break;
@@ -186,6 +184,17 @@ internal static class Program
         return (cpuTemp, gpuTemp, cpuUsage, gpuUsage, diskRead, diskWrite);
     }
 
+    private static bool ShouldProcessHardware(HardwareType type, bool includeStorageSensors) => type switch
+    {
+        HardwareType.Cpu => true,
+        HardwareType.GpuNvidia => true,
+        HardwareType.GpuAmd => true,
+        HardwareType.GpuIntel => true,
+        HardwareType.Motherboard => true,
+        HardwareType.Storage => includeStorageSensors,
+        _ => false
+    };
+
     private static (float? Temp, float? Usage) ReadCpu(
         IHardware cpu,
         float? existingTemp,
@@ -194,23 +203,23 @@ internal static class Program
         float? temp = existingTemp;
         float? usage = existingUsage;
 
-        var tempValues = new List<float>();
-        var loadValues = new List<float>();
+        float tempSum = 0f;
+        int tempCount = 0;
+        float loadSum = 0f;
+        int loadCount = 0;
 
-        // Debug COMPLETO: mostra informações da CPU e tipos de sensores apenas na PRIMEIRA vez
         if (!_cpuDebugShown && existingTemp is null && existingUsage is null)
         {
-            Console.WriteLine($"[DEBUG] CPU Hardware: {cpu.Name}");
-            Console.WriteLine($"[DEBUG] Total sensors: {cpu.Sensors.Length}");
-            
-            // Mostra contagem por tipo
+            LogInfo($"CPU Hardware: {cpu.Name}");
+            LogInfo($"Total sensors: {cpu.Sensors.Length}");
+
             var sensorTypes = cpu.Sensors
                 .GroupBy(s => s.SensorType)
                 .Select(g => $"{g.Key}: {g.Count()}")
                 .ToList();
-            
-            Console.WriteLine($"[DEBUG] Sensor types: {string.Join(", ", sensorTypes)}");
-            _cpuDebugShown = true; // Não repete mais
+
+            LogInfo($"Sensor types: {string.Join(", ", sensorTypes)}");
+            _cpuDebugShown = true;
         }
 
         foreach (var sensor in cpu.Sensors)
@@ -220,13 +229,11 @@ internal static class Program
             switch (sensor.SensorType)
             {
                 case SensorType.Temperature:
-                    // Debug: mostra sensores de temperatura encontrados
                     if (!_cpuDebugShown)
                     {
-                        Console.WriteLine($"[DEBUG] CPU Temp Sensor: {sensor.Name} = {sensor.Value:F1}°C");
+                        LogInfo($"CPU Temp Sensor: {sensor.Name} = {sensor.Value:F1}°C");
                     }
 
-                    // Preferência por ordem: Package > Tctl/Tdie (AMD) > Core Average > qualquer temperatura
                     if (sensor.Name.Contains("Package", StringComparison.OrdinalIgnoreCase))
                     {
                         temp = sensor.Value;
@@ -244,12 +251,13 @@ internal static class Program
                     else if (sensor.Name.Contains("Core", StringComparison.OrdinalIgnoreCase) ||
                              sensor.Name.Contains("CPU", StringComparison.OrdinalIgnoreCase))
                     {
-                        tempValues.Add(sensor.Value.Value);
+                        tempSum += sensor.Value.Value;
+                        tempCount++;
                     }
                     else
                     {
-                        // Qualquer outro sensor de temperatura como último recurso
-                        tempValues.Add(sensor.Value.Value);
+                        tempSum += sensor.Value.Value;
+                        tempCount++;
                     }
                     break;
 
@@ -261,26 +269,26 @@ internal static class Program
                     }
                     else if (sensor.Name.Contains("Core", StringComparison.OrdinalIgnoreCase))
                     {
-                        loadValues.Add(sensor.Value.Value);
+                        loadSum += sensor.Value.Value;
+                        loadCount++;
                     }
                     break;
             }
         }
 
-        // Fallback para média se não encontrou um sensor preferido
-        if (temp is null && tempValues.Count > 0)
+        if (temp is null && tempCount > 0)
         {
-            temp = tempValues.Average();
+            temp = tempSum / tempCount;
             if (!_cpuDebugShown)
-                Console.WriteLine($"[INFO] Usando média de {tempValues.Count} sensores: {temp:F1}°C");
+                LogInfo($"Usando média de {tempCount} sensores: {temp:F1}°C");
         }
         else if (temp is null && !_cpuDebugShown)
         {
-            Console.WriteLine("[WARN] Temperatura de CPU não disponível (sensor não exposto pelo hardware)");
+            LogWarn("Temperatura de CPU não disponível (sensor não exposto pelo hardware)");
         }
 
-        if (usage is null && loadValues.Count > 0)
-            usage = loadValues.Average();
+        if (usage is null && loadCount > 0)
+            usage = loadSum / loadCount;
 
         return (temp, usage);
     }
@@ -293,8 +301,10 @@ internal static class Program
         float? temp = existingTemp;
         float? usage = existingUsage;
 
-        var tempValues = new List<float>();
-        var loadValues = new List<float>();
+        float tempSum = 0f;
+        int tempCount = 0;
+        float loadSum = 0f;
+        int loadCount = 0;
 
         foreach (var sensor in gpu.Sensors)
         {
@@ -310,7 +320,8 @@ internal static class Program
                     }
                     else
                     {
-                        tempValues.Add(sensor.Value.Value);
+                        tempSum += sensor.Value.Value;
+                        tempCount++;
                     }
                     break;
 
@@ -323,18 +334,18 @@ internal static class Program
                     }
                     else
                     {
-                        loadValues.Add(sensor.Value.Value);
+                        loadSum += sensor.Value.Value;
+                        loadCount++;
                     }
                     break;
             }
         }
 
-        // Fallback para média
-        if (temp is null && tempValues.Count > 0)
-            temp = tempValues.Average();
+        if (temp is null && tempCount > 0)
+            temp = tempSum / tempCount;
 
-        if (usage is null && loadValues.Count > 0)
-            usage = loadValues.Average();
+        if (usage is null && loadCount > 0)
+            usage = loadSum / loadCount;
 
         return (temp, usage);
     }
@@ -355,12 +366,10 @@ internal static class Program
             {
                 if (sensor.Name.Contains("Read", StringComparison.OrdinalIgnoreCase))
                 {
-                    // Converte de B/s para MB/s
                     read = (read ?? 0) + (sensor.Value.Value / 1048576f);
                 }
                 else if (sensor.Name.Contains("Write", StringComparison.OrdinalIgnoreCase))
                 {
-                    // Converte de B/s para MB/s
                     write = (write ?? 0) + (sensor.Value.Value / 1048576f);
                 }
             }
@@ -377,12 +386,11 @@ internal static class Program
 
             if (sensor.SensorType == SensorType.Temperature)
             {
-                // Tenta pegar temperatura do chipset ou sistema
                 if (sensor.Name.Contains("System", StringComparison.OrdinalIgnoreCase) ||
                     sensor.Name.Contains("Motherboard", StringComparison.OrdinalIgnoreCase) ||
                     sensor.Name.Contains("Chipset", StringComparison.OrdinalIgnoreCase))
                 {
-                    Console.WriteLine($"[INFO] Usando temperatura da motherboard: {sensor.Name} = {sensor.Value:F1}°C");
+                    LogInfo($"Usando temperatura da motherboard: {sensor.Name} = {sensor.Value:F1}°C");
                     return sensor.Value;
                 }
             }
@@ -393,7 +401,6 @@ internal static class Program
     private static void WriteHwStats(string path,
         (float? CpuTemp, float? GpuTemp, float? CpuUsage, float? GpuUsage, float? DiskRead, float? DiskWrite) r)
     {
-        // Se algum valor vier nulo, joga 0 para não quebrar a skin
         float cpuTemp = r.CpuTemp ?? 0;
         float gpuTemp = r.GpuTemp ?? 0;
         float cpuUsage = r.CpuUsage ?? 0;
@@ -401,7 +408,7 @@ internal static class Program
         float diskRead = r.DiskRead ?? 0;
         float diskWrite = r.DiskWrite ?? 0;
 
-        var sb = new StringBuilder();
+        var sb = new StringBuilder(128);
         sb.AppendLine("CpuTemp=" + cpuTemp.ToString("F1", CultureInfo.InvariantCulture));
         sb.AppendLine("GpuTemp=" + gpuTemp.ToString("F1", CultureInfo.InvariantCulture));
         sb.AppendLine("CpuUsage=" + cpuUsage.ToString("F1", CultureInfo.InvariantCulture));
@@ -410,5 +417,27 @@ internal static class Program
         sb.AppendLine("DiskWrite=" + diskWrite.ToString("F1", CultureInfo.InvariantCulture));
 
         File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
+    }
+
+    private static void LogInfo(string message) => Log("INFO", message);
+
+    private static void LogWarn(string message) => Log("WARN", message);
+
+    private static void LogError(string message) => Log("ERROR", message);
+
+    private static void Log(string level, string message)
+    {
+        try
+        {
+            var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {level} {message}";
+            lock (LogSync)
+            {
+                File.AppendAllText(LogPath, line + Environment.NewLine, Encoding.UTF8);
+            }
+        }
+        catch
+        {
+            // Logging should never crash the bridge
+        }
     }
 }
