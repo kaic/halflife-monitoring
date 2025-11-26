@@ -2,7 +2,7 @@
 setlocal
 
 echo ========================================
-echo TempBridge - Background Installer
+echo TempBridge - Background Installer (Service)
 echo ========================================
 echo.
 
@@ -21,8 +21,7 @@ set "POWERSHELL_PATH=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe
 set "TARGET_DIR=%ProgramData%\TempBridge"
 set "STARTER_PS=%TARGET_DIR%\start_tempbridge.ps1"
 set "LOG_FILE=%TARGET_DIR%\install.log"
-set "TASK_NAME=TempBridgeMonitoring"
-set "PERF_LOG=%TARGET_DIR%\perf_rebuild.log"
+set "SERVICE_NAME=TempBridgeSvc"
 
 if not exist "%EXE_SOURCE%" (
     echo [ERROR] Could not find TempBridge.exe at:
@@ -33,9 +32,9 @@ if not exist "%EXE_SOURCE%" (
 )
 
 echo Cleaning previous installs...
-schtasks /Delete /TN "%TASK_NAME%" /F >nul 2>&1
-sc stop TempBridgeSvc >nul 2>&1
-sc delete TempBridgeSvc >nul 2>&1
+schtasks /Delete /TN TempBridgeMonitoring /F >nul 2>&1
+sc stop "%SERVICE_NAME%" >nul 2>&1
+sc delete "%SERVICE_NAME%" >nul 2>&1
 if exist "%TARGET_DIR%" rd /S /Q "%TARGET_DIR%" >nul 2>&1
 mkdir "%TARGET_DIR%"
 
@@ -46,28 +45,10 @@ if %errorLevel% neq 0 (
     exit /b 1
 )
 
-set "RUNNER_LOG=%TARGET_DIR%\launcher.log"
+set "RUNNER_LOG=%TARGET_DIR%\service.log"
 
-echo Removing downloaded-file mark (SmartScreen)...
 "%POWERSHELL_PATH%" -NoProfile -ExecutionPolicy Bypass -Command "try { Unblock-File -LiteralPath '%EXE_SOURCE%' -ErrorAction Stop } catch { }"
-"%POWERSHELL_PATH%" -NoProfile -ExecutionPolicy Bypass -Command "try { Unblock-File -LiteralPath '%TARGET_DIR%\TempBridge.exe' -ErrorAction Stop } catch { exit 2 }"
-if %errorLevel% neq 0 (
-    echo [WARN] Could not clear the Alternate Data Stream. SmartScreen might prompt on the first launch.
-) else (
-    echo [OK] Alternate Data Stream cleared successfully.
-)
-
-echo [INFO] Restoring Windows performance counters (lodctr /r)...
-lodctr /r > "%PERF_LOG%" 2>&1
-if %errorLevel% neq 0 (
-    echo [WARN] lodctr /r reported an issue. Details saved to:
-    echo        %PERF_LOG%
-) else (
-    echo [OK] Performance counter registry rebuilt.
-)
-
-echo [INFO] Resyncing WMI performance libraries...
-winmgmt /resyncperf >nul 2>&1
+"%POWERSHELL_PATH%" -NoProfile -ExecutionPolicy Bypass -Command "try { Unblock-File -LiteralPath '%TARGET_DIR%\TempBridge.exe' -ErrorAction Stop } catch { }"
 
 echo [INFO] Writing starter script to:
 set "_tmp=%STARTER_PS%"
@@ -105,22 +86,22 @@ if %errorLevel% neq 0 (
     exit /b 1
 )
 
-echo Registering scheduled task (current user)...
-schtasks /Create /TN "%TASK_NAME%" /TR "\"%POWERSHELL_PATH%\" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"%STARTER_PS%\"" /SC ONLOGON /RL LIMITED /IT /F > "%LOG_FILE%" 2>&1
+echo Registering Windows service (LocalSystem)...
+sc create "%SERVICE_NAME%" binPath= "\"%POWERSHELL_PATH%\" -NoProfile -ExecutionPolicy Bypass -File \"%STARTER_PS%\"" start= auto obj= LocalSystem DisplayName= "TempBridge Background" > "%LOG_FILE%" 2>&1
 if %errorLevel% neq 0 (
     type "%LOG_FILE%"
-    echo [ERROR] Failed to create scheduled task. See log above.
+    echo [ERROR] Service creation failed.
     pause
     exit /b 1
 )
 
-echo Triggering the task now to validate launch...
-schtasks /Run /TN "%TASK_NAME%" >> "%LOG_FILE%" 2>&1
+echo Starting service to validate launch...
+sc start "%SERVICE_NAME%" >> "%LOG_FILE%" 2>&1
 if %errorLevel% neq 0 (
     type "%LOG_FILE%"
-    echo [WARN] Scheduled task did not start. Check the log above.
+    echo [WARN] Service failed to start. Check the log above.
 ) else (
-    echo [OK] TempBridge started in the background via Task Scheduler.
+    echo [OK] TempBridge is now running as a hidden service.
 )
 
 echo.
@@ -128,7 +109,7 @@ echo ========================================
 echo Installation completed!
 echo ========================================
 echo.
-echo Launcher log:
+echo Service log:
 if exist "%RUNNER_LOG%" type "%RUNNER_LOG%"
 echo.
 pause
