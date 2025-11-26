@@ -8,7 +8,7 @@ namespace TempBridge;
 
 internal static class Program
 {
-    private static readonly TimeSpan LoopDelay = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan LoopDelay = TimeSpan.FromMilliseconds(300);
     private static readonly TimeSpan StatusLogInterval = TimeSpan.FromSeconds(10);
     private static readonly string BaseDirectory = AppContext.BaseDirectory;
     private static readonly string LogPath = Path.Combine(BaseDirectory, "tempbridge.log");
@@ -78,12 +78,9 @@ internal static class Program
             IsControllerEnabled = false
         };
 
-        DwmFpsReader? dwmFpsReader = null;
-
         try
         {
             computer.Open();
-            dwmFpsReader = DwmFpsReader.TryStart(LogInfo, LogWarn);
             LogInfo($"TempBridge is writing metrics to {hwStatsPath}");
 
             var nextStatusLog = DateTime.UtcNow;
@@ -94,8 +91,7 @@ internal static class Program
                 {
                     var readings = ReadSensors(
                         computer,
-                        includeStorageSensors: !useDiskCounters,
-                        externalGpuFps: dwmFpsReader?.CurrentFps);
+                        includeStorageSensors: !useDiskCounters);
 
                     if (useDiskCounters && diskReadCounter != null && diskWriteCounter != null)
                     {
@@ -119,10 +115,9 @@ internal static class Program
 
                     if (DateTime.UtcNow >= nextStatusLog)
                     {
-                        float gpuFps = readings.GpuFps ?? 0f;
                         LogInfo(
                             $"CPU {readings.CpuUsage:F1}% ({readings.CpuTemp:F1}°C) | " +
-                            $"GPU {readings.GpuUsage:F1}% ({readings.GpuTemp:F1}°C) {gpuFps:F1} FPS | " +
+                            $"GPU {readings.GpuUsage:F1}% ({readings.GpuTemp:F1}°C) | " +
                             $"Disk R:{readings.DiskRead:F1} W:{readings.DiskWrite:F1} MB/s");
                         nextStatusLog = DateTime.UtcNow + StatusLogInterval;
                     }
@@ -137,21 +132,19 @@ internal static class Program
         }
         finally
         {
-            dwmFpsReader?.Dispose();
             computer.Close();
             diskReadCounter?.Dispose();
             diskWriteCounter?.Dispose();
         }
     }
 
-    private static (float? CpuTemp, float? GpuTemp, float? CpuUsage, float? GpuUsage, float? GpuFps, float? DiskRead, float? DiskWrite)
-        ReadSensors(Computer computer, bool includeStorageSensors, float? externalGpuFps)
+    private static (float? CpuTemp, float? GpuTemp, float? CpuUsage, float? GpuUsage, float? DiskRead, float? DiskWrite)
+        ReadSensors(Computer computer, bool includeStorageSensors)
     {
         float? cpuTemp = null;
         float? gpuTemp = null;
         float? cpuUsage = null;
         float? gpuUsage = null;
-        float? gpuFps = externalGpuFps;
         float? diskRead = null;
         float? diskWrite = null;
 
@@ -190,7 +183,7 @@ internal static class Program
             }
         }
 
-        return (cpuTemp, gpuTemp, cpuUsage, gpuUsage, gpuFps, diskRead, diskWrite);
+        return (cpuTemp, gpuTemp, cpuUsage, gpuUsage, diskRead, diskWrite);
     }
 
     private static bool ShouldProcessHardware(HardwareType type, bool includeStorageSensors) => type switch
@@ -409,13 +402,12 @@ internal static class Program
     }
 
     private static void WriteHwStats(string path,
-        (float? CpuTemp, float? GpuTemp, float? CpuUsage, float? GpuUsage, float? GpuFps, float? DiskRead, float? DiskWrite) r)
+        (float? CpuTemp, float? GpuTemp, float? CpuUsage, float? GpuUsage, float? DiskRead, float? DiskWrite) r)
     {
         float cpuTemp = r.CpuTemp ?? 0;
         float gpuTemp = r.GpuTemp ?? 0;
         float cpuUsage = r.CpuUsage ?? 0;
         float gpuUsage = r.GpuUsage ?? 0;
-        float gpuFps = r.GpuFps ?? 0;
         float diskRead = r.DiskRead ?? 0;
         float diskWrite = r.DiskWrite ?? 0;
 
@@ -424,7 +416,6 @@ internal static class Program
         sb.AppendLine("GpuTemp=" + gpuTemp.ToString("F1", CultureInfo.InvariantCulture));
         sb.AppendLine("CpuUsage=" + cpuUsage.ToString("F1", CultureInfo.InvariantCulture));
         sb.AppendLine("GpuUsage=" + gpuUsage.ToString("F1", CultureInfo.InvariantCulture));
-        sb.AppendLine("GpuFps=" + gpuFps.ToString("F1", CultureInfo.InvariantCulture));
         sb.AppendLine("DiskRead=" + diskRead.ToString("F1", CultureInfo.InvariantCulture));
         sb.AppendLine("DiskWrite=" + diskWrite.ToString("F1", CultureInfo.InvariantCulture));
 
