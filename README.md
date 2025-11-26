@@ -22,10 +22,12 @@ Minimal hardware monitoring Half-Life style overlay theme for [Rainmeter](https:
 ## Features
 
 - **CPU**: Usage %
-- **GPU**: Usage % + Temperature °C + FPS *(NVIDIA/AMD/Intel)*
+- **GPU**: Usage % + Temperature °C *(NVIDIA/AMD/Intel)*
 - **RAM**: Usage in GB
 - **Disk**: Read/Write activity in MB/s
 - **Network**: Download/Upload in MB/s
+
+> **Note**: FPS monitoring is not included as it requires hooking into game rendering engines (DirectX/Vulkan), which needs external tools like MSI Afterburner/RivaTuner. For FPS overlay, use those tools alongside this skin.
 
 *About TempBridge:* TempBridge is a tiny .NET helper (~50 MB RAM at peak) that bridges LibreHardwareMonitor sensors to Rainmeter. Rainmeter cannot read GPU temperature/usage natively, so TempBridge runs in the background, writes a lightweight `hwstats.txt`, and stays invisible by starting as a Windows service.
 

@@ -15,7 +15,6 @@ internal static class Program
     private static readonly object LogSync = new();
     private static bool _cpuDebugShown = false;
     private static bool _gpuDebugShown = false;
-    private static FpsMonitor? _fpsMonitor = null;
 
     public static async Task Main()
     {
@@ -69,19 +68,6 @@ internal static class Program
             LogWarn($"Unable to initialize disk performance counters: {ex.Message}. Using LibreHardwareMonitor for disk throughput.");
         }
 
-        // Initialize FPS monitor (ETW-based)
-        try
-        {
-            _fpsMonitor = new FpsMonitor();
-            _fpsMonitor.Start();
-            LogInfo("FPS Monitor started (ETW-based frame capture)");
-        }
-        catch (Exception ex)
-        {
-            LogWarn($"FPS Monitor failed to start: {ex.Message}. FPS will not be available.");
-            _fpsMonitor = null;
-        }
-
         var computer = new Computer
         {
             IsCpuEnabled = true,
@@ -130,11 +116,10 @@ internal static class Program
 
                     if (DateTime.UtcNow >= nextStatusLog)
                     {
-                        var fpsText = readings.Fps.HasValue ? $" | FPS:{readings.Fps:F0}" : "";
                         LogInfo(
                             $"CPU {readings.CpuUsage:F1}% ({readings.CpuTemp:F1}°C) | " +
                             $"GPU {readings.GpuUsage:F1}% ({readings.GpuTemp:F1}°C) | " +
-                            $"Disk R:{readings.DiskRead:F1} W:{readings.DiskWrite:F1} MB/s{fpsText}");
+                            $"Disk R:{readings.DiskRead:F1} W:{readings.DiskWrite:F1} MB/s");
                         nextStatusLog = DateTime.UtcNow + StatusLogInterval;
                     }
                 }
@@ -148,14 +133,13 @@ internal static class Program
         }
         finally
         {
-            _fpsMonitor?.Dispose();
             computer.Close();
             diskReadCounter?.Dispose();
             diskWriteCounter?.Dispose();
         }
     }
 
-    private static (float? CpuTemp, float? GpuTemp, float? CpuUsage, float? GpuUsage, float? DiskRead, float? DiskWrite, float? Fps)
+    private static (float? CpuTemp, float? GpuTemp, float? CpuUsage, float? GpuUsage, float? DiskRead, float? DiskWrite)
         ReadSensors(Computer computer, bool includeStorageSensors)
     {
         float? cpuTemp = null;
@@ -164,7 +148,6 @@ internal static class Program
         float? gpuUsage = null;
         float? diskRead = null;
         float? diskWrite = null;
-        float? fps = _fpsMonitor?.GetFps();
 
         foreach (var hardware in computer.Hardware)
         {
@@ -201,7 +184,7 @@ internal static class Program
             }
         }
 
-        return (cpuTemp, gpuTemp, cpuUsage, gpuUsage, diskRead, diskWrite, fps);
+        return (cpuTemp, gpuTemp, cpuUsage, gpuUsage, diskRead, diskWrite);
     }
 
     private static bool ShouldProcessHardware(HardwareType type, bool includeStorageSensors) => type switch
@@ -454,7 +437,7 @@ internal static class Program
     }
 
     private static void WriteHwStats(string path,
-        (float? CpuTemp, float? GpuTemp, float? CpuUsage, float? GpuUsage, float? DiskRead, float? DiskWrite, float? Fps) r)
+        (float? CpuTemp, float? GpuTemp, float? CpuUsage, float? GpuUsage, float? DiskRead, float? DiskWrite) r)
     {
         float cpuTemp = r.CpuTemp ?? 0;
         float gpuTemp = r.GpuTemp ?? 0;
@@ -462,7 +445,6 @@ internal static class Program
         float gpuUsage = r.GpuUsage ?? 0;
         float diskRead = r.DiskRead ?? 0;
         float diskWrite = r.DiskWrite ?? 0;
-        float fps = r.Fps ?? 0;
 
         var sb = new StringBuilder(128);
         sb.AppendLine("CpuTemp=" + cpuTemp.ToString("F1", CultureInfo.InvariantCulture));
@@ -471,7 +453,6 @@ internal static class Program
         sb.AppendLine("GpuUsage=" + gpuUsage.ToString("F1", CultureInfo.InvariantCulture));
         sb.AppendLine("DiskRead=" + diskRead.ToString("F1", CultureInfo.InvariantCulture));
         sb.AppendLine("DiskWrite=" + diskWrite.ToString("F1", CultureInfo.InvariantCulture));
-        sb.AppendLine("Fps=" + fps.ToString("F0", CultureInfo.InvariantCulture));
 
         File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
     }
