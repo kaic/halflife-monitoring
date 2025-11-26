@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Vanara.PInvoke;
 
@@ -53,7 +54,7 @@ internal sealed class DwmFpsReader : IDisposable
         {
             try
             {
-                var timing = DWM_TIMING_INFO.Default;
+                var timing = DwmApi.DWM_TIMING_INFO.Default;
                 if (DwmApi.DwmGetCompositionTimingInfo(IntPtr.Zero, ref timing).Succeeded)
                 {
                     var frames = timing.cFramesDisplayed;
