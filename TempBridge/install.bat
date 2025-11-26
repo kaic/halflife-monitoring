@@ -125,12 +125,9 @@ echo.
 
 echo.
 
-set "DOCS_PATH=%USERPROFILE%\Documents"
-
 echo Writing launcher script to %RUNNER_PS% ...
 (
 echo $ErrorActionPreference = 'Stop'
-echo $docs = '%DOCS_PATH%'
 echo $exe = '%TARGET_DIR%\TempBridge.exe'
 echo $log = '%LOG_FILE%'
 echo $wd = '%TARGET_DIR%'
@@ -139,14 +136,13 @@ echo function Log { param^([string]$m^) $ts = Get-Date -Format 'yyyy-MM-dd HH:mm
 echo.
 echo try {
 echo     if ^(-not ^(Test-Path -LiteralPath $exe^)^) { Log "ERROR missing exe $exe"; exit 1 }
-echo     Log "Start user=$env:USERNAME docs=$docs exe=$exe"
+echo     Log "Start user=$env:USERNAME exe=$exe"
 echo     $psi = New-Object System.Diagnostics.ProcessStartInfo
 echo     $psi.FileName = $exe
 echo     $psi.WorkingDirectory = $wd
 echo     $psi.UseShellExecute = $false
 echo     $psi.CreateNoWindow = $true
 echo     $psi.WindowStyle = 'Hidden'
-echo     $psi.Environment['TEMPBRIDGE_DOCUMENTS'] = $docs
 echo     $p = [System.Diagnostics.Process]::Start^($psi^)
 echo     if ^(-not $p^) { Log "ERROR failed to start process"; exit 1 }
 echo     Log "Started TempBridge pid=$^($p.Id^)"
