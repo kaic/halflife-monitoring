@@ -23,6 +23,7 @@ set "POWERSHELL_PATH=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe
 set "RUN_KEY=TempBridge"
 set "SERVICE_NAME=TempBridgeSvc"
 set "TASK_NAME=TempBridgeMonitoring"
+set "EXE_TARGET=%TARGET_DIR%\TempBridge.exe"
 
 if not exist "%EXE_SOURCE%" (
     echo [ERRO] Nao encontrei o TempBridge compilado em:
@@ -44,7 +45,20 @@ if not exist "%TARGET_DIR%" (
     del /Q "%TARGET_DIR%\*" >nul 2>&1
 )
 
-copy /Y "%EXE_SOURCE%" "%TARGET_DIR%\TempBridge.exe" >nul
+copy /Y "%EXE_SOURCE%" "%EXE_TARGET%" >nul
+if %errorLevel% neq 0 (
+    echo [ERRO] Falha ao copiar o TempBridge para %EXE_TARGET%.
+    pause
+    exit /b 1
+)
+
+echo Removendo marca de arquivo baixado (SmartScreen)...
+"%POWERSHELL_PATH%" -NoProfile -ExecutionPolicy Bypass -Command "try { Unblock-File -LiteralPath '%EXE_TARGET%' -ErrorAction Stop } catch { exit 1 }"
+if %errorLevel% neq 0 (
+    echo [AVISO] Nao foi possivel remover a marcacao. Windows SmartScreen pode pedir confirmacao no primeiro start.
+) else (
+    echo [OK] Marca de seguranca removida com sucesso.
+)
 
 set "RUNNER_LOG=%TARGET_DIR%\launcher.log"
 
@@ -53,7 +67,7 @@ set "_tmp=%RUNNER_PS%"
 echo   %_tmp%
 (
     echo $ErrorActionPreference = 'Stop'
-    echo $exe = '%TARGET_DIR%\TempBridge.exe'
+    echo $exe = '%EXE_TARGET%'
     echo $log = '%RUNNER_LOG%'
     echo function Log { param([string]$m^) $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'; Add-Content -LiteralPath $log -Value "[$ts] $m" }
     echo try {
