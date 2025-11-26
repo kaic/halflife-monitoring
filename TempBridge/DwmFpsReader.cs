@@ -70,7 +70,7 @@ internal sealed class DwmFpsReader : IDisposable
         foreach (var category in CategoryCandidates)
         foreach (var counter in CounterCandidates)
         {
-            var pc = CreateCounter(category, counter, null, logWarn);
+            var pc = CreateCounter(category, counter, null, logWarn, verbose: true);
             if (pc != null)
                 return pc;
         }
@@ -93,7 +93,7 @@ internal sealed class DwmFpsReader : IDisposable
                             if (!CounterMatches(counter.CounterName))
                                 continue;
 
-                            var pc = CreateCounter(category.CategoryName, counter.CounterName, instance, logWarn);
+                            var pc = CreateCounter(category.CategoryName, counter.CounterName, instance, logWarn, verbose: false);
                             if (pc != null)
                                 return pc;
                         }
@@ -107,7 +107,7 @@ internal sealed class DwmFpsReader : IDisposable
                         if (!CounterMatches(counter.CounterName))
                             continue;
 
-                        var pc = CreateCounter(category.CategoryName, counter.CounterName, null, logWarn);
+                        var pc = CreateCounter(category.CategoryName, counter.CounterName, null, logWarn, verbose: false);
                         if (pc != null)
                             return pc;
                     }
@@ -122,7 +122,7 @@ internal sealed class DwmFpsReader : IDisposable
         return null;
     }
 
-    private static PerformanceCounter? CreateCounter(string category, string counter, string? instance, Action<string> logWarn)
+    private static PerformanceCounter? CreateCounter(string category, string counter, string? instance, Action<string> logWarn, bool verbose)
     {
         try
         {
@@ -132,7 +132,8 @@ internal sealed class DwmFpsReader : IDisposable
         }
         catch (Exception ex)
         {
-            logWarn($"Failed to access counter {category}/{counter}: {ex.Message}");
+            if (verbose)
+                logWarn($"Failed to access counter {category}/{counter}: {ex.Message}");
             return null;
         }
     }

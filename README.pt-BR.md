@@ -63,6 +63,7 @@ Minimal hardware monitoring Half-Life style overlay theme for [Rainmeter](https:
 - Abra um **Prompt de Comando como Administrador**
 - Execute `TempBridge\install.bat`
 - O script copia o `TempBridge.exe` para `%ProgramData%\TempBridge`, registra uma tarefa no Agendador para o seu usuário (maiores privilégios) e garante que ele rode oculto a cada logon
+- Durante a instalação executamos `lodctr /r` + `winmgmt /resyncperf` para restaurar os contadores de desempenho do Windows (necessários para o FPS)
 - Durante a instalacao rodamos `Unblock-File` para remover o SmartScreen; se o antivirus sinalizar, permita/ignore uma vez
 - Se quiser remover depois, execute `TempBridge\uninstall.bat` (Administrador)
 
@@ -112,6 +113,7 @@ WindowY=40
 - O contador gráfico do Windows só atualiza quando existe um app/jogo 3D em execução
 - Ative “Agendamento de GPU com aceleração de hardware” em Configurações → Sistema → Vídeo → Gráficos
 - Verifique se o Desktop Window Manager (DWM) está habilitado (é padrão no Windows moderno; não use temas clássicos legado)
+- Se o contador não aparecer, execute `lodctr /r` (Admin), reinicie o PC e rode novamente o `install.bat`
 
 **Disk always 0 MB/s?**
 - Open Command Prompt as Administrator

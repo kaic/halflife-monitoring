@@ -18,11 +18,11 @@ if %errorLevel% neq 0 (
 set "SCRIPT_DIR=%~dp0"
 set "EXE_SOURCE=%SCRIPT_DIR%TempBridge.exe"
 set "POWERSHELL_PATH=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
-set "DOCS_PATH=%USERPROFILE%\Documents"
 set "TARGET_DIR=%ProgramData%\TempBridge"
 set "STARTER_PS=%TARGET_DIR%\start_tempbridge.ps1"
 set "LOG_FILE=%TARGET_DIR%\install.log"
 set "TASK_NAME=TempBridgeMonitoring"
+set "PERF_LOG=%TARGET_DIR%\perf_rebuild.log"
 
 if not exist "%EXE_SOURCE%" (
     echo [ERROR] Could not find TempBridge.exe at:
@@ -57,12 +57,24 @@ if %errorLevel% neq 0 (
     echo [OK] Alternate Data Stream cleared successfully.
 )
 
+echo [INFO] Restoring Windows performance counters (lodctr /r)...
+lodctr /r > "%PERF_LOG%" 2>&1
+if %errorLevel% neq 0 (
+    echo [WARN] lodctr /r reported an issue. Details saved to:
+    echo        %PERF_LOG%
+) else (
+    echo [OK] Performance counter registry rebuilt.
+)
+
+echo [INFO] Resyncing WMI performance libraries...
+winmgmt /resyncperf >nul 2>&1
+
 echo [INFO] Writing starter script to:
 set "_tmp=%STARTER_PS%"
 echo   %_tmp%
 (
     echo $ErrorActionPreference = 'Stop'
-    echo $docs = '%DOCS_PATH%'
+    echo $docs = [Environment]::GetFolderPath('MyDocuments')
     echo $exe = '%TARGET_DIR%\TempBridge.exe'
     echo $log = '%RUNNER_LOG%'
     echo $wd = '%TARGET_DIR%'
@@ -93,8 +105,8 @@ if %errorLevel% neq 0 (
     exit /b 1
 )
 
-echo Registering scheduled task (current user, highest privileges)...
-schtasks /Create /TN "%TASK_NAME%" /TR "\"%POWERSHELL_PATH%\" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"%STARTER_PS%\"" /SC ONLOGON /RL HIGHEST /F > "%LOG_FILE%" 2>&1
+echo Registering scheduled task (current user)...
+schtasks /Create /TN "%TASK_NAME%" /TR "\"%POWERSHELL_PATH%\" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"%STARTER_PS%\"" /SC ONLOGON /RL LIMITED /IT /F > "%LOG_FILE%" 2>&1
 if %errorLevel% neq 0 (
     type "%LOG_FILE%"
     echo [ERROR] Failed to create scheduled task. See log above.
