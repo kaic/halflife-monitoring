@@ -19,7 +19,7 @@ Minimal hardware monitoring Half-Life style overlay theme for [Rainmeter](https:
 
 ## Features
 
-- **CPU**: Usage % + Temperature °C
+- **CPU**: Usage %
 - **GPU**: Usage % + Temperature °C *(NVIDIA/AMD/Intel)*
 - *(FPS temporarily disabled while we look for a reliable source)*
 - **RAM**: Usage in GB
@@ -113,9 +113,6 @@ WindowY=40
 - Ensure TempBridge is running
 - Check that `@Resources/hwstats.txt` exists and is being updated
 - Try restarting TempBridge
-
-**FPS always 0?**
-
 
 **Disk always 0 MB/s?**
 
