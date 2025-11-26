@@ -78,9 +78,12 @@ internal static class Program
             IsControllerEnabled = false
         };
 
+        FpsMonitor? fpsMonitor = null;
+
         try
         {
             computer.Open();
+            fpsMonitor = FpsMonitor.TryStart(LogInfo, LogWarn);
             LogInfo($"TempBridge is writing metrics to {hwStatsPath}");
 
             var nextStatusLog = DateTime.UtcNow;
@@ -89,7 +92,10 @@ internal static class Program
             {
                 try
                 {
-                    var readings = ReadSensors(computer, includeStorageSensors: !useDiskCounters);
+                    var readings = ReadSensors(
+                        computer,
+                        includeStorageSensors: !useDiskCounters,
+                        externalGpuFps: fpsMonitor?.CurrentFps);
 
                     if (useDiskCounters && diskReadCounter != null && diskWriteCounter != null)
                     {
@@ -131,6 +137,7 @@ internal static class Program
         }
         finally
         {
+            fpsMonitor?.Dispose();
             computer.Close();
             diskReadCounter?.Dispose();
             diskWriteCounter?.Dispose();
@@ -138,13 +145,13 @@ internal static class Program
     }
 
     private static (float? CpuTemp, float? GpuTemp, float? CpuUsage, float? GpuUsage, float? GpuFps, float? DiskRead, float? DiskWrite)
-        ReadSensors(Computer computer, bool includeStorageSensors)
+        ReadSensors(Computer computer, bool includeStorageSensors, float? externalGpuFps)
     {
         float? cpuTemp = null;
         float? gpuTemp = null;
         float? cpuUsage = null;
         float? gpuUsage = null;
-        float? gpuFps = null;
+        float? gpuFps = externalGpuFps;
         float? diskRead = null;
         float? diskWrite = null;
 
@@ -164,7 +171,7 @@ internal static class Program
                 case HardwareType.GpuNvidia:
                 case HardwareType.GpuAmd:
                 case HardwareType.GpuIntel:
-                    (gpuTemp, gpuUsage, gpuFps) = ReadGpu(hardware, gpuTemp, gpuUsage, gpuFps);
+                    (gpuTemp, gpuUsage) = ReadGpu(hardware, gpuTemp, gpuUsage);
                     break;
 
                 case HardwareType.Storage:
@@ -295,15 +302,13 @@ internal static class Program
         return (temp, usage);
     }
 
-    private static (float? Temp, float? Usage, float? Fps) ReadGpu(
+    private static (float? Temp, float? Usage) ReadGpu(
         IHardware gpu,
         float? existingTemp,
-        float? existingUsage,
-        float? existingFps)
+        float? existingUsage)
     {
         float? temp = existingTemp;
         float? usage = existingUsage;
-        float? fps = existingFps;
 
         float tempSum = 0f;
         int tempCount = 0;
@@ -343,15 +348,6 @@ internal static class Program
                     }
                     break;
 
-                case SensorType.SmallData:
-                case SensorType.Data:
-                case SensorType.Throughput:
-                case SensorType.Frequency:
-                    if (LooksLikeFpsSensor(sensor.Name))
-                    {
-                        fps = sensor.Value;
-                    }
-                    break;
             }
         }
 
@@ -361,7 +357,7 @@ internal static class Program
         if (usage is null && loadCount > 0)
             usage = loadSum / loadCount;
 
-        return (temp, usage, fps);
+        return (temp, usage);
     }
 
     private static (float? Read, float? Write) ReadDisk(
@@ -455,13 +451,5 @@ internal static class Program
         {
             // Logging should never crash the bridge
         }
-    }
-
-    private static bool LooksLikeFpsSensor(string name)
-    {
-        return name.Contains("FPS", StringComparison.OrdinalIgnoreCase) ||
-               name.Contains("Frame Rate", StringComparison.OrdinalIgnoreCase) ||
-               name.Contains("FrameRate", StringComparison.OrdinalIgnoreCase) ||
-               name.Contains("Frames Per Second", StringComparison.OrdinalIgnoreCase);
     }
 }
